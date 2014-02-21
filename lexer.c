@@ -48,37 +48,37 @@
 
 struct token
 {
-   	int type;
-   	int line;
-   	char* text;
+    int type;
+    int line;
+    char* text;
 };
 
 struct lexer
 {
-	char* buffer;
-   	int bufSize;
-  	int bufUsed;
-   	int ch;
-   	int line;
-   	bool peeked;
+    char* buffer;
+    int bufSize;
+    int bufUsed;
+    int ch;
+    int line;
+    bool peeked;
 };
 
 
 Token * TOK_New( Lexer * lex, int type )
 {
-	Token* tok = malloc( sizeof( Token ) );
-	tok->type = type;
-	tok->text = strdup( lex->buffer );
-	tok->line = lex->line;
-	lex->bufUsed = 0;
-	lex->buffer[0] = '\0';
-	return tok;
+    Token* tok = malloc( sizeof( Token ) );
+    tok->type = type;
+    tok->text = strdup( lex->buffer );
+    tok->line = lex->line;
+    lex->bufUsed = 0;
+    lex->buffer[0] = '\0';
+    return tok;
 }
 
 void TOK_Delete( Token * tok )
 {
-	free( tok->text );
-	free( tok );
+    free( tok->text );
+    free( tok );
 }
 
 void TOK_Dump( Token * tok )
@@ -90,25 +90,25 @@ void TOK_Dump( Token * tok )
 
 Lexer * LEX_New()
 {
-	Lexer* lex = malloc( sizeof( Lexer ) );
-	lex->bufSize = LEXER_DEFAULT_BUFSIZE;
-	lex->bufUsed = 0;
-	lex->buffer = malloc( lex->bufSize );
-	lex->buffer[0] = '\0';
-	lex->line = 1;
-	return lex;
+    Lexer* lex = malloc( sizeof( Lexer ) );
+    lex->bufSize = LEXER_DEFAULT_BUFSIZE;
+    lex->bufUsed = 0;
+    lex->buffer = malloc( lex->bufSize );
+    lex->buffer[0] = '\0';
+    lex->line = 1;
+    return lex;
 }
 
 void LEX_Delete( Lexer * lex )
 {
-	free( lex->buffer );
-	free( lex );
+    free( lex->buffer );
+    free( lex );
 }
 
 char LEX_Peek( Lexer * lex )
 {
-	if( lex->peeked )	
-		return lex->ch;
+    if( lex->peeked )	
+        return lex->ch;
 	
     char c = getchar();
     lex->ch = c;
