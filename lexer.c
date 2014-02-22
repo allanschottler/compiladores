@@ -45,6 +45,7 @@
 #define T_SLASH		32
 
 // Misc
+#define T_COMMENT        777
 #define T_ID        999
 #define T_ERROR     666
 
@@ -163,7 +164,71 @@ Token * LEX_NextToken( Lexer * lex )
             
             ch = LEX_Peek( lex );
         }
-
+        
+        // Comments
+        if( ch == '/' ) 
+        {
+            ch = LEX_Get( lex );
+            LEX_AddToBuffer( lex, ch );
+            
+            for( ;; ) 
+            {
+                ch = LEX_Get( lex );
+                
+                if( ch == '/' ) 
+                {
+                    LEX_AddToBuffer( lex, ch );
+                    
+                    while( !strchr( "\n", ch ) ) 
+                    {
+                        ch = LEX_Get( lex );
+                        LEX_AddToBuffer( lex, ch );
+                        
+                        if( ch == '\n' ) 
+                        {
+                            lex->line++;
+                        }
+                    }
+                    
+                    return TOK_New( lex, T_COMMENT );
+                }
+                else if( ch == '*' )
+                {
+                    LEX_AddToBuffer( lex, ch );
+                    ch = LEX_Get( lex );                    
+                    
+                    for( ;; )
+                    {
+                        while( ch != '*' ) 
+                        {
+                            ch = LEX_Get( lex );
+                            LEX_AddToBuffer( lex, ch );
+                            
+                            if( ch == '\n' ) 
+                            {
+                                lex->line++;
+                            }
+                        }                        
+                        
+                        ch = LEX_Peek( lex );
+                        
+                        if( ch == '/' )
+                        {
+                            LEX_AddToBuffer( lex, ch );
+                            return TOK_New( lex, T_COMMENT );
+                        }
+                    }
+                }
+                else
+                {
+                    break;
+                }
+            }
+        }
+        
+        if( ch == EOF ) 
+            return NULL; 
+            
         // String        
         if( ch == '"' ) 
         {
@@ -246,7 +311,8 @@ Token * LEX_NextToken( Lexer * lex )
                     
                     return TOK_New( lex, T_INT );
                 }
-                else if( !strchr( "1234567890abcdefABCDEF", ch ) ) 
+                //else if( !( ( strchr( "1234567890abcdefABCDEF", ch ) && isHexa ) ) || ( strchr( "1234567890", ch ) && !isHexa ) )
+                else if( !strchr( "1234567890abcdefABCDEF", ch ) )
                 {
                     return TOK_New( lex, T_ERROR );
                 } 
