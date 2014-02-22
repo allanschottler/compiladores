@@ -260,9 +260,6 @@ Token * LEX_NextToken( Lexer * lex )
         if( ch == EOF ) 
             return NULL;       
         
-        // ID's
-        // TODO
-        
         // Keywords
         while( !strchr( " \t\n\"", ch ) ) 
         {
@@ -275,7 +272,7 @@ Token * LEX_NextToken( Lexer * lex )
         }
 
         if( lex->bufUsed > 0 ) 
-        {
+        {            
             if( strcmp( lex->buffer, "if" ) == 0 ) 
             {
                 return TOK_New( lex, T_IF );
@@ -407,9 +404,29 @@ Token * LEX_NextToken( Lexer * lex )
             if( strcmp( lex->buffer, "/" ) == 0 ) 
             {
                 return TOK_New( lex, T_SLASH );
-            }            
-            
-            return TOK_New( lex, T_ERROR );
+            }
         }
+        
+        char * tr = lex->buffer;
+        int i = 0;
+        
+        // ID's
+        if( tr[i] == '_' || ( ( tr[i] >= 'a' && tr[i] <= 'z' ) || ( tr[i] >= 'A' && tr[i] <= 'Z' ) ) )
+        {
+            for( i = 0; i < lex->bufUsed; ++i ) 
+            {          
+                if( tr[i] != '_' && ( tr[i] < 'a' || tr[i] > 'z' ) && ( tr[i] < 'A' || tr[i] > 'Z' ) && !strchr( "1234567890", tr[i] ) )
+                {                   
+                    return TOK_New( lex, T_ERROR );      
+                }
+            }
+            
+            return TOK_New( lex, T_ID );
+        }
+        
+        if( ch == EOF ) 
+            return NULL;
+            
+        return TOK_New( lex, T_ERROR ); 
     }
 }
