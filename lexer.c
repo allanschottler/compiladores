@@ -5,57 +5,59 @@
 
 #include "lexer.h"
 
-// Misc
-#define LEXER_DEFAULT_BUFSIZE 32
-#define ERROR 666
+#define LEXET_DEFAULT_BUFSIZE 32
 
 // Palavras reservadas
-#define R_IF 		(1<<0)
-#define R_ELSE 		(1<<1)
-#define R_END 		(1<<2) 
-#define R_WHILE 	(1<<3)
-#define R_LOOP 		(1<<4)
-#define R_FUN 		(1<<5)
-#define R_RETURN 	(1<<6)
-#define R_NEW 		(1<<7)
-#define R_STRING 	(1<<8)
-#define R_INT 		(1<<9)
-#define R_CHAR 		(1<<10)
-#define R_BOOL 		(1<<11)
-#define R_TRUE 		(1<<12)
-#define R_FALSE 	(1<<13)
-#define R_AND 		(1<<14)
-#define R_OR 		(1<<15)
-#define R_NOT 		(1<<16)
+#define T_IF 		0
+#define T_ELSE 		1
+#define T_END 		2 
+#define T_WHILE 	3
+#define T_LOOP 		4
+#define T_FUN 		5
+#define T_RETURN 	6
+#define T_NEW 		7
+#define T_STRING 	8
+#define T_INT 		9
+#define T_CHAR 		10
+#define T_BOOL 		11
+#define T_TRUE 		12
+#define T_FALSE 	13
+#define T_AND 		14
+#define T_OR 		15
+#define T_NOT 		16
 
 // Operadores e pontuação
-#define O_OCBRACKET	(1<<17)
-#define O_CCBRACKET	(1<<18)
-#define O_COMMA		(1<<19)
-#define O_COLON		(1<<20)
-#define O_LARGER	(1<<21)
-#define O_SMALLER	(1<<22)
-#define O_LARGEREQ	(1<<23)
-#define O_SMALLEREQ	(1<<24)
-#define O_EQ		(1<<25)
-#define O_ABRACKETS	(1<<26)
-#define O_OSBRACKET	(1<<27)
-#define O_CSBRACKET	(1<<28)
-#define O_PLUS		(1<<29)
-#define O_MINUS		(1<<30)
-#define O_ASTERISK	(1<<31)
-#define O_SLASH		(1<<32)
+#define T_OCBRACKET	17
+#define T_CCBRACKET	18
+#define T_COMMA		19
+#define T_COLON		20
+#define T_LARGER	21
+#define T_SMALLER	22
+#define T_LARGEREQ	23
+#define T_SMALLEREQ	24
+#define T_ATTRIB	25
+#define T_EQ    	26
+#define T_OSBRACKET	27
+#define T_CSBRACKET	28
+#define T_PLUS		29
+#define T_MINUS		30
+#define T_ASTERISK	31
+#define T_SLASH		32
+
+// Misc
+#define T_ID        999
+#define T_ERROR     666
 
 struct token
 {
     int type;
     int line;
-    char* text;
+    char * text;
 };
 
 struct lexer
 {
-    char* buffer;
+    char * buffer;
     int bufSize;
     int bufUsed;
     int ch;
@@ -91,7 +93,7 @@ void TOK_Dump( Token * tok )
 Lexer * LEX_New()
 {
     Lexer* lex = malloc( sizeof( Lexer ) );
-    lex->bufSize = LEXER_DEFAULT_BUFSIZE;
+    lex->bufSize = LEXET_DEFAULT_BUFSIZE;
     lex->bufUsed = 0;
     lex->buffer = malloc( lex->bufSize );
     lex->buffer[0] = '\0';
@@ -149,8 +151,7 @@ Token * LEX_NextToken( Lexer * lex )
     {
         char ch = LEX_Peek( lex );
 
-        // Whitespace
-        // [ \t\n]*
+        // Whitespace        
         while( strchr( " \t\n", ch ) ) 
         {
             ch = LEX_Get( lex );
@@ -163,8 +164,7 @@ Token * LEX_NextToken( Lexer * lex )
             ch = LEX_Peek( lex );
         }
 
-        // String
-        // \"([^\n"\\]|\\["\\])*\"
+        // String        
         if( ch == '"' ) 
         {
             ch = LEX_Get( lex );
@@ -173,30 +173,32 @@ Token * LEX_NextToken( Lexer * lex )
             for( ;; ) 
             {
                 ch = LEX_Get( lex );
+                
                 if( ch == EOF ) 
                 {
-                    return TOK_New( lex, ERROR );
+                    return TOK_New( lex, T_ERROR );
                 } 
                 else if( ch == '\\' ) 
                 {
                     ch = LEX_Get( lex );
+                    
                     if( ch == '\\' || ch == '"' ) 
                     {
                         LEX_AddToBuffer( lex, ch );
                     } 
                     else 
                     {
-                        return TOK_New( lex, ERROR );
+                        return TOK_New( lex, T_ERROR );
                     }
                 } 
                 else if( ch == '"' ) 
                 {
                     LEX_AddToBuffer( lex, ch );
-                    return TOK_New( lex, R_STRING );
+                    return TOK_New( lex, T_STRING );
                 } 
                 else if( ch == '\n' ) 
                 {
-                    return TOK_New( lex, ERROR );
+                    return TOK_New( lex, T_ERROR );
                 } 
                 else 
                 {
@@ -204,12 +206,63 @@ Token * LEX_NextToken( Lexer * lex )
                 }
             }
         }
-
+        
         if( ch == EOF ) 
+            return NULL; 
+            
+        // Number
+        if( strchr( "1234567890", ch ) ) 
         {
-            return NULL;
+            bool isHexa = false;
+            ch = LEX_Get( lex );
+            
+            LEX_AddToBuffer( lex, ch );
+            
+            // Trata hexadecimal
+            if( ch == '0' )
+            {
+                ch = LEX_Peek( lex );
+                
+                if( ch == 'x' )
+                {                    
+                    ch = LEX_Get( lex );
+                    LEX_AddToBuffer( lex, ch );
+                    
+                    isHexa = true;
+                }
+            }
+            
+            for( ;; ) 
+            {
+                ch = LEX_Get( lex );
+                
+                if( ch == EOF || strchr( " \t\n\"", ch ) ) 
+                {
+                    if( isHexa )
+                    {
+                        int value = strtol( lex->buffer, NULL, 16 );
+                        sprintf( lex->buffer, "%d", value );
+                    }
+                    
+                    return TOK_New( lex, T_INT );
+                }
+                else if( !strchr( "1234567890abcdefABCDEF", ch ) ) 
+                {
+                    return TOK_New( lex, T_ERROR );
+                } 
+                else 
+                {
+                    LEX_AddToBuffer( lex, ch );
+                }
+            }
         }
-
+        
+        if( ch == EOF ) 
+            return NULL;       
+        
+        // ID's
+        // TODO
+        
         // Keywords
         while( !strchr( " \t\n\"", ch ) ) 
         {
@@ -225,74 +278,138 @@ Token * LEX_NextToken( Lexer * lex )
         {
             if( strcmp( lex->buffer, "if" ) == 0 ) 
             {
-                return TOK_New( lex, R_IF );
+                return TOK_New( lex, T_IF );
             }
             if( strcmp( lex->buffer, "else" ) == 0 ) 
             {
-                return TOK_New( lex, R_ELSE );
+                return TOK_New( lex, T_ELSE );
             }
             if( strcmp( lex->buffer, "end" ) == 0 ) 
             {
-                return TOK_New( lex, R_END );
+                return TOK_New( lex, T_END );
             }
             if( strcmp( lex->buffer, "while" ) == 0 ) 
             {
-                return TOK_New( lex, R_WHILE );
+                return TOK_New( lex, T_WHILE );
             }
             if( strcmp( lex->buffer, "loop" ) == 0 ) 
             {
-                return TOK_New( lex, R_LOOP );
+                return TOK_New( lex, T_LOOP );
             }
             if( strcmp( lex->buffer, "fun" ) == 0 ) 
             {
-                return TOK_New( lex, R_FUN );
+                return TOK_New( lex, T_FUN );
             }
             if( strcmp( lex->buffer, "return" ) == 0 ) 
             {
-                return TOK_New( lex, R_RETURN );
+                return TOK_New( lex, T_RETURN );
             }
             if( strcmp( lex->buffer, "new" ) == 0 ) 
             {
-                return TOK_New( lex, R_NEW );
+                return TOK_New( lex, T_NEW );
             }
             if( strcmp( lex->buffer, "string" ) == 0 ) 
             {
-                return TOK_New( lex, R_STRING );
+                return TOK_New( lex, T_STRING );
             }
             if( strcmp( lex->buffer, "int" ) == 0 ) 
             {
-                return TOK_New( lex, R_INT );
+                return TOK_New( lex, T_INT );
             }
             if( strcmp( lex->buffer, "char" ) == 0 ) 
             {
-                return TOK_New( lex, R_CHAR );
+                return TOK_New( lex, T_CHAR );
             }
             if( strcmp( lex->buffer, "bool" ) == 0 ) 
             {
-                return TOK_New( lex, R_BOOL );
+                return TOK_New( lex, T_BOOL );
             }
             if( strcmp( lex->buffer, "true" ) == 0 ) 
             {
-                return TOK_New( lex, R_TRUE );
+                return TOK_New( lex, T_TRUE );
             }
             if( strcmp( lex->buffer, "false" ) == 0 ) 
             {
-                return TOK_New( lex, R_FALSE );
+                return TOK_New( lex, T_FALSE );
             }
             if( strcmp( lex->buffer, "and" ) == 0 ) 
             {
-                return TOK_New( lex, R_AND );
+                return TOK_New( lex, T_AND );
             }
             if( strcmp( lex->buffer, "or" ) == 0 ) 
             {
-                return TOK_New( lex, R_OR );
+                return TOK_New( lex, T_OR );
             }
             if( strcmp( lex->buffer, "not" ) == 0 ) 
             {
-                return TOK_New( lex, R_NOT );
+                return TOK_New( lex, T_NOT );
             }
+            if( strcmp( lex->buffer, "(" ) == 0 ) 
+            {
+                return TOK_New( lex, T_OCBRACKET );
+            }
+            if( strcmp( lex->buffer, ")" ) == 0 ) 
+            {
+                return TOK_New( lex, T_CCBRACKET );
+            }
+            if( strcmp( lex->buffer, "," ) == 0 ) 
+            {
+                return TOK_New( lex, T_COMMA );
+            }
+            if( strcmp( lex->buffer, ":" ) == 0 ) 
+            {
+                return TOK_New( lex, T_COLON );
+            }
+            if( strcmp( lex->buffer, ">" ) == 0 ) 
+            {
+                return TOK_New( lex, T_LARGER );
+            }
+            if( strcmp( lex->buffer, "<" ) == 0 ) 
+            {
+                return TOK_New( lex, T_SMALLER );
+            }
+            if( strcmp( lex->buffer, ">=" ) == 0 ) 
+            {
+                return TOK_New( lex, T_LARGEREQ );
+            }
+            if( strcmp( lex->buffer, "<=" ) == 0 ) 
+            {
+                return TOK_New( lex, T_SMALLEREQ );
+            }
+            if( strcmp( lex->buffer, "=" ) == 0 ) 
+            {
+                return TOK_New( lex, T_ATTRIB );
+            }
+            if( strcmp( lex->buffer, "<>" ) == 0 ) 
+            {
+                return TOK_New( lex, T_EQ );
+            }
+            if( strcmp( lex->buffer, "[" ) == 0 ) 
+            {
+                return TOK_New( lex, T_OSBRACKET );
+            }
+            if( strcmp( lex->buffer, "]" ) == 0 ) 
+            {
+                return TOK_New( lex, T_CSBRACKET );
+            }
+            if( strcmp( lex->buffer, "+" ) == 0 ) 
+            {
+                return TOK_New( lex, T_PLUS );
+            }
+            if( strcmp( lex->buffer, "-" ) == 0 ) 
+            {
+                return TOK_New( lex, T_MINUS );
+            }
+            if( strcmp( lex->buffer, "*" ) == 0 ) 
+            {
+                return TOK_New( lex, T_ASTERISK );
+            }
+            if( strcmp( lex->buffer, "/" ) == 0 ) 
+            {
+                return TOK_New( lex, T_SLASH );
+            }            
             
-            return TOK_New( lex, ERROR );
+            return TOK_New( lex, T_ERROR );
         }
     }
 }
