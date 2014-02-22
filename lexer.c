@@ -418,7 +418,7 @@ Token * LEX_NextToken( Lexer * lex )
                 if( tr[i] != '_' && ( tr[i] < 'a' || tr[i] > 'z' ) && ( tr[i] < 'A' || tr[i] > 'Z' ) && !strchr( "1234567890", tr[i] ) )
                 {                   
                     return TOK_New( lex, T_ERROR );      
-                }
+                } 
             }
             
             return TOK_New( lex, T_ID );
