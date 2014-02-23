@@ -1,0 +1,16 @@
+//Line comment
+if 0xFA <> 250
+    
+    _int : int
+    a : string
+    int2 : int
+    
+    a = "string"
+    
+    _int = 4646 / 2
+    
+    int2=0x01
+    /*   /  */
+        //Nested comment
+    /***/      
+end
