@@ -175,6 +175,7 @@ Token * LEX_NextToken( Lexer * lex )
             {
                 ch = LEX_Get( lex );
                 
+                // Line comment
                 if( ch == '/' ) 
                 {
                     LEX_AddToBuffer( lex, ch );
@@ -190,13 +191,15 @@ Token * LEX_NextToken( Lexer * lex )
                     
                     return tok;
                 }
+                // Nested comment
                 else if( ch == '*' )
                 {
                     LEX_AddToBuffer( lex, ch );
-                    ch = LEX_Get( lex );                    
-                    
+                                   
                     for( ;; )
                     {
+                        ch = LEX_Get( lex );
+                        
                         if( ch == '\n' ) 
                         {
                             lex->line++;
@@ -204,19 +207,22 @@ Token * LEX_NextToken( Lexer * lex )
                             
                         while( ch != '*' ) 
                         {
-                            ch = LEX_Get( lex );
                             LEX_AddToBuffer( lex, ch );
                             
                             if( ch == '\n' ) 
                             {
                                 lex->line++;
                             }
+                            
+                            ch = LEX_Get( lex );
                         }                        
                         
+                        LEX_AddToBuffer( lex, ch );
                         ch = LEX_Peek( lex );
                         
                         if( ch == '/' )
                         {
+                            ch = LEX_Get( lex );
                             LEX_AddToBuffer( lex, ch );
                             return TOK_New( lex, T_COMMENT );
                         }
