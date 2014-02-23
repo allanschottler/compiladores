@@ -1,16 +1,23 @@
 //Line comment
-if 0xFA <> 250
+fun foo(var:bool, _var2:int) :string
+
+    if 0xFA <>var2
+        
+        intarray:new [2]int
+        _int:int
+        a : string
+        int2 : int
+        
+        a = "string"
+        
+        _int = 46+46
+        _int = _int / 2       
+        
+        /*   /  */
+            //Nested comment
+        /***/      
+    end
     
-    _int : int
-    a : string
-    int2 : int
+    return a
     
-    a = "string"
-    
-    _int = 4646 / 2
-    
-    int2=0x01
-    /*   /  */
-        //Nested comment
-    /***/      
 end

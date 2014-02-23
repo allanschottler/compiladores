@@ -5,7 +5,7 @@
 
 #include "lexer.h"
 
-#define LEXET_DEFAULT_BUFSIZE 32
+#define LEXER_DEFAULT_BUFSIZE 32
 
 // Palavras reservadas
 #define T_IF 		0
@@ -45,9 +45,17 @@
 #define T_SLASH		32
 
 // Misc
-#define T_COMMENT        777
+#define T_COMMENT   777
 #define T_ID        999
 #define T_ERROR     666
+
+// Key strings
+#define S_DECIMAL   "1234567890"
+#define S_HEXA      "1234567890abcdefABCDEF"
+#define S_OPERATOR  "(),:><=[]+-*/" 
+#define S_WHITESPC  " \t\n"
+#define S_ESCAPE    " \t\n\""
+
 
 struct token
 {
@@ -94,7 +102,7 @@ void TOK_Dump( Token * tok )
 Lexer * LEX_New()
 {
     Lexer* lex = malloc( sizeof( Lexer ) );
-    lex->bufSize = LEXET_DEFAULT_BUFSIZE;
+    lex->bufSize = LEXER_DEFAULT_BUFSIZE;
     lex->bufUsed = 0;
     lex->buffer = malloc( lex->bufSize );
     lex->buffer[0] = '\0';
@@ -153,7 +161,7 @@ Token * LEX_NextToken( Lexer * lex )
         char ch = LEX_Peek( lex );
 
         // Whitespace        
-        while( strchr( " \t\n", ch ) ) 
+        while( strchr( S_WHITESPC, ch ) ) 
         {
             ch = LEX_Get( lex );
             
@@ -180,7 +188,7 @@ Token * LEX_NextToken( Lexer * lex )
                 {
                     LEX_AddToBuffer( lex, ch );
                     
-                    while( !strchr( "\n", ch ) ) 
+                    while( ch != '\n' ) 
                     {
                         ch = LEX_Get( lex );
                         LEX_AddToBuffer( lex, ch ); 
@@ -209,10 +217,8 @@ Token * LEX_NextToken( Lexer * lex )
                         {
                             LEX_AddToBuffer( lex, ch );
                             
-                            if( ch == '\n' ) 
-                            {
-                                lex->line++;
-                            }
+                            if( ch == '\n' )
+                                lex->line++;                            
                             
                             ch = LEX_Get( lex );
                         }                        
@@ -285,7 +291,7 @@ Token * LEX_NextToken( Lexer * lex )
             return NULL; 
             
         // Number
-        if( strchr( "1234567890", ch ) ) 
+        if( strchr( S_DECIMAL, ch ) ) 
         {
             bool isHexa = false;
             ch = LEX_Get( lex );
@@ -308,9 +314,9 @@ Token * LEX_NextToken( Lexer * lex )
             
             for( ;; ) 
             {
-                ch = LEX_Get( lex );
+                ch = LEX_Peek( lex );
                 
-                if( ch == EOF || strchr( " \t\n\"", ch ) ) 
+                if( ch == EOF || strchr( S_ESCAPE, ch ) || ( isHexa && !strchr( S_HEXA, ch ) ) || ( !isHexa && !strchr( S_DECIMAL, ch ) ) ) 
                 {
                     if( isHexa )
                     {
@@ -325,12 +331,19 @@ Token * LEX_NextToken( Lexer * lex )
                     
                     return tok;
                 }                
-                else if( ( isHexa && !strchr( "1234567890abcdefABCDEF", ch ) ) || ( !isHexa && !strchr( "1234567890", ch ) ) )
+                /*else if(  )
                 {
+                    while( !strchr( " \t\n", ch ) )
+                    {
+                        LEX_AddToBuffer( lex, ch );
+                        ch = LEX_Get( lex );                        
+                    }
+                                        
                     return TOK_New( lex, T_ERROR );
-                } 
+                }*/ 
                 else 
                 {
+                    ch = LEX_Get( lex );
                     LEX_AddToBuffer( lex, ch );
                 }
             }
@@ -339,8 +352,87 @@ Token * LEX_NextToken( Lexer * lex )
         if( ch == EOF ) 
             return NULL;       
         
+        // Operators and punctuation
+        while( strchr( S_OPERATOR, ch ) ) 
+        {
+            ch = LEX_Get( lex );
+            LEX_AddToBuffer( lex, ch );
+            ch = LEX_Peek( lex );
+            
+            if( ch == EOF ) 
+                return NULL;            
+        }
+        
+        if( lex->bufUsed > 0 ) 
+        { 
+            if( strcmp( lex->buffer, "(" ) == 0 ) 
+            {
+                return TOK_New( lex, T_OCBRACKET );
+            }
+            if( strcmp( lex->buffer, ")" ) == 0 ) 
+            {
+                return TOK_New( lex, T_CCBRACKET );
+            }
+            if( strcmp( lex->buffer, "," ) == 0 ) 
+            {
+                return TOK_New( lex, T_COMMA );
+            }
+            if( strcmp( lex->buffer, ":" ) == 0 ) 
+            {
+                return TOK_New( lex, T_COLON );
+            }
+            if( strcmp( lex->buffer, ">" ) == 0 ) 
+            {
+                return TOK_New( lex, T_LARGER );
+            }
+            if( strcmp( lex->buffer, "<" ) == 0 ) 
+            {
+                return TOK_New( lex, T_SMALLER );
+            }
+            if( strcmp( lex->buffer, ">=" ) == 0 ) 
+            {
+                return TOK_New( lex, T_LARGEREQ );
+            }
+            if( strcmp( lex->buffer, "<=" ) == 0 ) 
+            {
+                return TOK_New( lex, T_SMALLEREQ );
+            }
+            if( strcmp( lex->buffer, "=" ) == 0 ) 
+            {
+                return TOK_New( lex, T_ATTRIB );
+            }
+            if( strcmp( lex->buffer, "<>" ) == 0 ) 
+            {
+                return TOK_New( lex, T_EQ );
+            }
+            if( strcmp( lex->buffer, "[" ) == 0 ) 
+            {
+                return TOK_New( lex, T_OSBRACKET );
+            }
+            if( strcmp( lex->buffer, "]" ) == 0 ) 
+            {
+                return TOK_New( lex, T_CSBRACKET );
+            }
+            if( strcmp( lex->buffer, "+" ) == 0 ) 
+            {
+                return TOK_New( lex, T_PLUS );
+            }
+            if( strcmp( lex->buffer, "-" ) == 0 ) 
+            {
+                return TOK_New( lex, T_MINUS );
+            }
+            if( strcmp( lex->buffer, "*" ) == 0 ) 
+            {
+                return TOK_New( lex, T_ASTERISK );
+            }
+            if( strcmp( lex->buffer, "/" ) == 0 ) 
+            {
+                return TOK_New( lex, T_SLASH );
+            }
+        }
+        
         // Keywords
-        while( !strchr( " \t\n\"", ch ) ) 
+        while( !strchr( S_ESCAPE, ch ) && !strchr( S_OPERATOR, ch ) ) 
         {
             ch = LEX_Get( lex );
             LEX_AddToBuffer( lex, ch );
@@ -420,70 +512,6 @@ Token * LEX_NextToken( Lexer * lex )
             {
                 return TOK_New( lex, T_NOT );
             }
-            if( strcmp( lex->buffer, "(" ) == 0 ) 
-            {
-                return TOK_New( lex, T_OCBRACKET );
-            }
-            if( strcmp( lex->buffer, ")" ) == 0 ) 
-            {
-                return TOK_New( lex, T_CCBRACKET );
-            }
-            if( strcmp( lex->buffer, "," ) == 0 ) 
-            {
-                return TOK_New( lex, T_COMMA );
-            }
-            if( strcmp( lex->buffer, ":" ) == 0 ) 
-            {
-                return TOK_New( lex, T_COLON );
-            }
-            if( strcmp( lex->buffer, ">" ) == 0 ) 
-            {
-                return TOK_New( lex, T_LARGER );
-            }
-            if( strcmp( lex->buffer, "<" ) == 0 ) 
-            {
-                return TOK_New( lex, T_SMALLER );
-            }
-            if( strcmp( lex->buffer, ">=" ) == 0 ) 
-            {
-                return TOK_New( lex, T_LARGEREQ );
-            }
-            if( strcmp( lex->buffer, "<=" ) == 0 ) 
-            {
-                return TOK_New( lex, T_SMALLEREQ );
-            }
-            if( strcmp( lex->buffer, "=" ) == 0 ) 
-            {
-                return TOK_New( lex, T_ATTRIB );
-            }
-            if( strcmp( lex->buffer, "<>" ) == 0 ) 
-            {
-                return TOK_New( lex, T_EQ );
-            }
-            if( strcmp( lex->buffer, "[" ) == 0 ) 
-            {
-                return TOK_New( lex, T_OSBRACKET );
-            }
-            if( strcmp( lex->buffer, "]" ) == 0 ) 
-            {
-                return TOK_New( lex, T_CSBRACKET );
-            }
-            if( strcmp( lex->buffer, "+" ) == 0 ) 
-            {
-                return TOK_New( lex, T_PLUS );
-            }
-            if( strcmp( lex->buffer, "-" ) == 0 ) 
-            {
-                return TOK_New( lex, T_MINUS );
-            }
-            if( strcmp( lex->buffer, "*" ) == 0 ) 
-            {
-                return TOK_New( lex, T_ASTERISK );
-            }
-            if( strcmp( lex->buffer, "/" ) == 0 ) 
-            {
-                return TOK_New( lex, T_SLASH );
-            }
         }
         
         char * tr = lex->buffer;
@@ -494,9 +522,9 @@ Token * LEX_NextToken( Lexer * lex )
         {
             for( i = 0; i < lex->bufUsed; ++i ) 
             {          
-                if( tr[i] != '_' && ( tr[i] < 'a' || tr[i] > 'z' ) && ( tr[i] < 'A' || tr[i] > 'Z' ) && !strchr( "1234567890", tr[i] ) )
-                {                   
-                    return TOK_New( lex, T_ERROR );      
+                if( tr[i] != '_' && ( tr[i] < 'a' || tr[i] > 'z' ) && ( tr[i] < 'A' || tr[i] > 'Z' ) && !strchr( S_DECIMAL, tr[i] ) )
+                {                  
+                    return TOK_New( lex, T_ID );      
                 } 
             }
             
