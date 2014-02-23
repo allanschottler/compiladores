@@ -182,15 +182,13 @@ Token * LEX_NextToken( Lexer * lex )
                     while( !strchr( "\n", ch ) ) 
                     {
                         ch = LEX_Get( lex );
-                        LEX_AddToBuffer( lex, ch );
-                        
-                        if( ch == '\n' ) 
-                        {
-                            lex->line++;
-                        }
+                        LEX_AddToBuffer( lex, ch ); 
                     }
                     
-                    return TOK_New( lex, T_COMMENT );
+                    Token * tok = TOK_New( lex, T_COMMENT );
+                    lex->line++;
+                    
+                    return tok;
                 }
                 else if( ch == '*' )
                 {
@@ -199,6 +197,11 @@ Token * LEX_NextToken( Lexer * lex )
                     
                     for( ;; )
                     {
+                        if( ch == '\n' ) 
+                        {
+                            lex->line++;
+                        }
+                            
                         while( ch != '*' ) 
                         {
                             ch = LEX_Get( lex );
@@ -309,10 +312,14 @@ Token * LEX_NextToken( Lexer * lex )
                         sprintf( lex->buffer, "%d", value );
                     }
                     
-                    return TOK_New( lex, T_INT );
-                }
-                //else if( !( ( strchr( "1234567890abcdefABCDEF", ch ) && isHexa ) ) || ( strchr( "1234567890", ch ) && !isHexa ) )
-                else if( !strchr( "1234567890abcdefABCDEF", ch ) )
+                    Token * tok = TOK_New( lex, T_INT );
+                    
+                    if( ch == '\n' )
+                        lex->line++;
+                    
+                    return tok;
+                }                
+                else if( ( isHexa && !strchr( "1234567890abcdefABCDEF", ch ) ) || ( !isHexa && !strchr( "1234567890", ch ) ) )
                 {
                     return TOK_New( lex, T_ERROR );
                 } 
