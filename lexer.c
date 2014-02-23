@@ -327,20 +327,13 @@ Token * LEX_NextToken( Lexer * lex )
                     Token * tok = TOK_New( lex, T_INT );
                     
                     if( ch == '\n' )
+                    {
+                        ch = LEX_Get( lex );
                         lex->line++;
+                    }
                     
                     return tok;
-                }                
-                /*else if(  )
-                {
-                    while( !strchr( " \t\n", ch ) )
-                    {
-                        LEX_AddToBuffer( lex, ch );
-                        ch = LEX_Get( lex );                        
-                    }
-                                        
-                    return TOK_New( lex, T_ERROR );
-                }*/ 
+                }
                 else 
                 {
                     ch = LEX_Get( lex );
