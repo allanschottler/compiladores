@@ -392,11 +392,11 @@ Token * LEX_NextToken( Lexer * lex )
             }
             if( strcmp( lex->buffer, "=" ) == 0 ) 
             {
-                return TOK_New( lex, T_ATTRIB );
+                return TOK_New( lex, T_EQ );
             }
             if( strcmp( lex->buffer, "<>" ) == 0 ) 
             {
-                return TOK_New( lex, T_EQ );
+                return TOK_New( lex, T_NEQ );
             }
             if( strcmp( lex->buffer, "[" ) == 0 ) 
             {
