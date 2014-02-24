@@ -35,8 +35,8 @@
 #define T_SMALLER	22
 #define T_LARGEREQ	23
 #define T_SMALLEREQ	24
-#define T_ATTRIB	25
-#define T_EQ    	26
+#define T_EQ		25
+#define T_NEQ    	26
 #define T_OSBRACKET	27
 #define T_CSBRACKET	28
 #define T_PLUS		29
