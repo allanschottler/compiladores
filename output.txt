@@ -81,8 +81,16 @@ _int @line 13
 46 @line 13
 29
 + @line 13
+17
+( @line 13
 9
 46 @line 13
+30
+- @line 13
+9
+2 @line 13
+18
+) @line 13
 999
 _int @line 14
 25
