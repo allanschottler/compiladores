@@ -1,0 +1,110 @@
+777
+//Line comment
+ @line 1
+5
+fun @line 2
+999
+foo @line 2
+17
+( @line 2
+999
+var @line 2
+20
+: @line 2
+11
+bool @line 2
+19
+, @line 2
+999
+_var2 @line 2
+20
+: @line 2
+9
+int @line 2
+18
+) @line 2
+20
+: @line 2
+8
+string @line 2
+0
+if @line 4
+9
+250 @line 4
+26
+<> @line 4
+999
+var2 @line 4
+999
+intarray @line 6
+20
+: @line 6
+7
+new @line 6
+27
+[ @line 6
+9
+2 @line 6
+28
+] @line 6
+9
+int @line 6
+999
+_int @line 7
+20
+: @line 7
+9
+int @line 7
+999
+a @line 8
+20
+: @line 8
+8
+string @line 8
+999
+int2 @line 9
+20
+: @line 9
+9
+int @line 9
+999
+a @line 11
+25
+= @line 11
+8
+"string" @line 11
+999
+_int @line 13
+25
+= @line 13
+9
+46 @line 13
+29
++ @line 13
+9
+46 @line 13
+999
+_int @line 14
+25
+= @line 14
+999
+_int @line 14
+32
+/ @line 14
+9
+2 @line 14
+777
+/*   /  */ @line 16
+777
+//Nested comment
+ @line 17
+777
+/***/ @line 18
+2
+end @line 19
+6
+return @line 21
+999
+a @line 21
+2
+end @line 23
