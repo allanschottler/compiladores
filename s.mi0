@@ -10,7 +10,7 @@ fun foo(var:bool, _var2:int) :string
         
         a = "string"
         
-        _int = 46+46
+        _int = 46+(46-2)
         _int = _int / 2       
         
         /*   /  */

@@ -52,7 +52,8 @@
 // Key strings
 #define S_DECIMAL   "1234567890"
 #define S_HEXA      "1234567890abcdefABCDEF"
-#define S_OPERATOR  "(),:><=[]+-*/" 
+#define S_OPERATOR  ":><=+-*/" 
+#define S_PUNCT     "(),[]" 
 #define S_WHITESPC  " \t\n"
 #define S_ESCAPE    " \t\n\""
 
@@ -345,7 +346,38 @@ Token * LEX_NextToken( Lexer * lex )
         if( ch == EOF ) 
             return NULL;       
         
-        // Operators and punctuation
+        // Punctuation
+        if( strchr( S_PUNCT, ch ) ) 
+        {
+            ch = LEX_Get( lex );
+            LEX_AddToBuffer( lex, ch );
+            
+            if( lex->bufUsed > 0 ) 
+            { 
+                if( strcmp( lex->buffer, "(" ) == 0 ) 
+                {
+                    return TOK_New( lex, T_OCBRACKET );
+                }
+                if( strcmp( lex->buffer, ")" ) == 0 ) 
+                {
+                    return TOK_New( lex, T_CCBRACKET );
+                }
+                if( strcmp( lex->buffer, "," ) == 0 ) 
+                {
+                    return TOK_New( lex, T_COMMA );
+                }
+                if( strcmp( lex->buffer, "[" ) == 0 ) 
+                {
+                    return TOK_New( lex, T_OSBRACKET );
+                }
+                if( strcmp( lex->buffer, "]" ) == 0 ) 
+                {
+                    return TOK_New( lex, T_CSBRACKET );
+                }
+            }
+        }
+        
+        // Operators
         while( strchr( S_OPERATOR, ch ) ) 
         {
             ch = LEX_Get( lex );
@@ -357,19 +389,7 @@ Token * LEX_NextToken( Lexer * lex )
         }
         
         if( lex->bufUsed > 0 ) 
-        { 
-            if( strcmp( lex->buffer, "(" ) == 0 ) 
-            {
-                return TOK_New( lex, T_OCBRACKET );
-            }
-            if( strcmp( lex->buffer, ")" ) == 0 ) 
-            {
-                return TOK_New( lex, T_CCBRACKET );
-            }
-            if( strcmp( lex->buffer, "," ) == 0 ) 
-            {
-                return TOK_New( lex, T_COMMA );
-            }
+        {
             if( strcmp( lex->buffer, ":" ) == 0 ) 
             {
                 return TOK_New( lex, T_COLON );
@@ -393,19 +413,18 @@ Token * LEX_NextToken( Lexer * lex )
             if( strcmp( lex->buffer, "=" ) == 0 ) 
             {
                 return TOK_New( lex, T_EQ );
+<<<<<<< HEAD
             }
             if( strcmp( lex->buffer, "<>" ) == 0 ) 
             {
                 return TOK_New( lex, T_NEQ );
+=======
+>>>>>>> 655ec45bf7b2da842fd0b97aab327edca6b8079a
             }
-            if( strcmp( lex->buffer, "[" ) == 0 ) 
+            if( strcmp( lex->buffer, "<>" ) == 0 ) 
             {
-                return TOK_New( lex, T_OSBRACKET );
-            }
-            if( strcmp( lex->buffer, "]" ) == 0 ) 
-            {
-                return TOK_New( lex, T_CSBRACKET );
-            }
+                return TOK_New( lex, T_NEQ );
+            }            
             if( strcmp( lex->buffer, "+" ) == 0 ) 
             {
                 return TOK_New( lex, T_PLUS );
@@ -425,7 +444,7 @@ Token * LEX_NextToken( Lexer * lex )
         }
         
         // Keywords
-        while( !strchr( S_ESCAPE, ch ) && !strchr( S_OPERATOR, ch ) ) 
+        while( !strchr( S_ESCAPE, ch ) && !strchr( S_OPERATOR, ch ) && !strchr( S_PUNCT, ch ) ) 
         {
             ch = LEX_Get( lex );
             LEX_AddToBuffer( lex, ch );
