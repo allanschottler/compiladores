@@ -183,68 +183,72 @@ Token * LEX_NextToken( Lexer * lex )
         {
             ch = LEX_Get( lex );
             LEX_AddToBuffer( lex, ch );
+            char c = LEX_Peek( lex );
             
-            for( ;; ) 
+            if( c == '/' || c == '*' )
             {
-                ch = LEX_Get( lex );
-                
-                // Line comment
-                if( ch == '/' ) 
+                for( ;; ) 
                 {
-                    LEX_AddToBuffer( lex, ch );
+                    ch = LEX_Get( lex );
                     
-                    while( ch != '\n' && ch != EOF ) 
+                    // Line comment
+                    if( ch == '/' ) 
                     {
-                        ch = LEX_Get( lex );
-                        LEX_AddToBuffer( lex, ch ); 
-                    }
-                    
-                    Token * tok = TOK_New( lex, T_COMMENT );
-                    lex->line++;
-                    
-                    return tok;
-                }
-                // Nested comment
-                else if( ch == '*' )
-                {
-                    LEX_AddToBuffer( lex, ch );
-                                   
-                    for( ;; )
-                    {
-                        ch = LEX_Get( lex );
-                        
-                        if( ch == '\n' ) 
-                        {
-                            lex->line++;
-                        }
-                            
-                        while( ch != '*' ) 
-                        {
-                            if( ch == EOF )
-                                return TOK_New( lex, T_COMMENT );
-                                
-                            LEX_AddToBuffer( lex, ch );
-                            
-                            if( ch == '\n' )
-                                lex->line++;                            
-                            
-                            ch = LEX_Get( lex );
-                        }                        
-                        
                         LEX_AddToBuffer( lex, ch );
-                        ch = LEX_Peek( lex );
                         
-                        if( ch == '/' )
+                        while( ch != '\n' && ch != EOF ) 
                         {
                             ch = LEX_Get( lex );
+                            LEX_AddToBuffer( lex, ch ); 
+                        }
+                        
+                        Token * tok = TOK_New( lex, T_COMMENT );
+                        lex->line++;
+                        
+                        return tok;
+                    }
+                    // Nested comment
+                    else if( ch == '*' )
+                    {
+                        LEX_AddToBuffer( lex, ch );
+                                       
+                        for( ;; )
+                        {
+                            ch = LEX_Get( lex );
+                            
+                            if( ch == '\n' ) 
+                            {
+                                lex->line++;
+                            }
+                                
+                            while( ch != '*' ) 
+                            {
+                                if( ch == EOF )
+                                    return TOK_New( lex, T_COMMENT );
+                                    
+                                LEX_AddToBuffer( lex, ch );
+                                
+                                if( ch == '\n' )
+                                    lex->line++;                            
+                                
+                                ch = LEX_Get( lex );
+                            }                        
+                            
                             LEX_AddToBuffer( lex, ch );
-                            return TOK_New( lex, T_COMMENT );
+                            ch = LEX_Peek( lex );
+                            
+                            if( ch == '/' )
+                            {
+                                ch = LEX_Get( lex );
+                                LEX_AddToBuffer( lex, ch );
+                                return TOK_New( lex, T_COMMENT );
+                            }
                         }
                     }
-                }
-                else
-                {
-                    break;
+                    else
+                    {
+                        break;
+                    }
                 }
             }
         }
@@ -391,6 +395,12 @@ Token * LEX_NextToken( Lexer * lex )
         // Operators
         if( strchr( S_OPERATOR, ch ) )
         {
+            // Devido a leitura de '/' em comments, isso vem primeiro
+            if( strcmp( lex->buffer, "/" ) == 0 ) 
+            {
+                return TOK_New( lex, T_SLASH );
+            }
+                
             ch = LEX_Get( lex );
             LEX_AddToBuffer( lex, ch );
             
@@ -443,12 +453,11 @@ Token * LEX_NextToken( Lexer * lex )
                 if( strcmp( lex->buffer, "*" ) == 0 ) 
                 {
                     return TOK_New( lex, T_ASTERISK );
-                }
-                if( strcmp( lex->buffer, "/" ) == 0 ) 
-                {
-                    return TOK_New( lex, T_SLASH );
-                }
+                }                
             }
+            
+            // Nao tratou algum char em S_OPERATOR
+            return TOK_New( lex, T_ERROR );
         }       
         
         // Keywords
