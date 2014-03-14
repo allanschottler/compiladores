@@ -189,7 +189,7 @@ Token * LEX_NextToken( Lexer * lex )
                 {
                     LEX_AddToBuffer( lex, ch );
                     
-                    while( ch != '\n' ) 
+                    while( ch != '\n' && ch != EOF ) 
                     {
                         ch = LEX_Get( lex );
                         LEX_AddToBuffer( lex, ch ); 
@@ -216,6 +216,9 @@ Token * LEX_NextToken( Lexer * lex )
                             
                         while( ch != '*' ) 
                         {
+                            if( ch == EOF )
+                                return TOK_New( lex, T_COMMENT );
+                                
                             LEX_AddToBuffer( lex, ch );
                             
                             if( ch == '\n' )
@@ -413,13 +416,6 @@ Token * LEX_NextToken( Lexer * lex )
             if( strcmp( lex->buffer, "=" ) == 0 ) 
             {
                 return TOK_New( lex, T_EQ );
-<<<<<<< HEAD
-            }
-            if( strcmp( lex->buffer, "<>" ) == 0 ) 
-            {
-                return TOK_New( lex, T_NEQ );
-=======
->>>>>>> 655ec45bf7b2da842fd0b97aab327edca6b8079a
             }
             if( strcmp( lex->buffer, "<>" ) == 0 ) 
             {
