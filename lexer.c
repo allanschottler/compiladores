@@ -538,9 +538,9 @@ Token * LEX_NextToken( Lexer * lex )
         {
             for( i = 0; i < lex->bufUsed; ++i ) 
             {          
-                if( tr[i] != '_' && ( tr[i] < 'a' || tr[i] > 'z' ) && ( tr[i] < 'A' || tr[i] > 'Z' ) && !strchr( S_DECIMAL, tr[i] ) )
+                if( !( tr[i] == '_' || ( ( tr[i] >= 'a' && tr[i] <= 'z' ) || ( tr[i] >= 'A' && tr[i] <= 'Z' ) || strchr( S_DECIMAL, tr[i] ) ) ) )
                 {                  
-                    return TOK_New( lex, T_ID );      
+                    return TOK_New( lex, T_ERROR );      
                 } 
             }
             
