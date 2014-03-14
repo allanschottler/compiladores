@@ -44,6 +44,10 @@
 #define T_ASTERISK	31
 #define T_SLASH		32
 
+// Valores
+#define T_VSTRING	33
+#define T_VINT		34
+
 // Misc
 #define T_COMMENT   777
 #define T_ID        999
@@ -269,6 +273,10 @@ Token * LEX_NextToken( Lexer * lex )
                     if( ch == '\\' || ch == '"' ) 
                     {
                         LEX_AddToBuffer( lex, ch );
+                    }
+                    else if( ch == 'n' )
+                    {
+                        LEX_AddToBuffer( lex, '\n' );
                     } 
                     else 
                     {
@@ -278,7 +286,7 @@ Token * LEX_NextToken( Lexer * lex )
                 else if( ch == '"' ) 
                 {
                     LEX_AddToBuffer( lex, ch );
-                    return TOK_New( lex, T_STRING );
+                    return TOK_New( lex, T_VSTRING );
                 } 
                 else if( ch == '\n' ) 
                 {
@@ -328,7 +336,7 @@ Token * LEX_NextToken( Lexer * lex )
                         sprintf( lex->buffer, "%d", value );
                     }
                     
-                    Token * tok = TOK_New( lex, T_INT );
+                    Token * tok = TOK_New( lex, T_VINT );
                     
                     if( ch == '\n' )
                     {
