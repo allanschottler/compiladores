@@ -7,48 +7,6 @@
 
 #define LEXER_DEFAULT_BUFSIZE 32
 
-// Palavras reservadas
-#define T_IF 		0
-#define T_ELSE 		1
-#define T_END 		2 
-#define T_WHILE 	3
-#define T_LOOP 		4
-#define T_FUN 		5
-#define T_RETURN 	6
-#define T_NEW 		7
-#define T_STRING 	8
-#define T_INT 		9
-#define T_CHAR 		10
-#define T_BOOL 		11
-#define T_TRUE 		12
-#define T_FALSE 	13
-#define T_AND 		14
-#define T_OR 		15
-#define T_NOT 		16
-
-// Operadores e pontuação
-#define T_OCBRACKET	17
-#define T_CCBRACKET	18
-#define T_COMMA		19
-#define T_COLON		20
-#define T_LARGER	21
-#define T_SMALLER	22
-#define T_LARGEREQ	23
-#define T_SMALLEREQ	24
-#define T_EQ		25
-#define T_NEQ    	26
-#define T_OSBRACKET	27
-#define T_CSBRACKET	28
-#define T_PLUS		29
-#define T_MINUS		30
-#define T_ASTERISK	31
-#define T_SLASH		32
-
-// Misc
-#define T_COMMENT   777
-#define T_ID        999
-#define T_ERROR     666
-
 // Key strings
 #define S_DECIMAL   "1234567890"
 #define S_HEXA      "1234567890abcdefABCDEF"
@@ -58,12 +16,15 @@
 #define S_ESCAPE    " \t\n\""
 
 
-struct token
-{
-    int type;
-    int line;
-    char * text;
-};
+char LEX_Peek( Lexer * lex );
+
+char LEX_Get( Lexer * lex );
+
+void LEX_AddToBuffer( Lexer * lex, char c );
+
+void LEX_ClearBuffer( Lexer * lex );
+
+Token * LEX_AllocToken( Lexer * lex, int type );
 
 struct lexer
 {
@@ -74,31 +35,6 @@ struct lexer
     int line;
     bool peeked;
 };
-
-
-Token * TOK_New( Lexer * lex, int type )
-{
-    Token* tok = malloc( sizeof( Token ) );
-    tok->type = type;
-    tok->text = strdup( lex->buffer );
-    tok->line = lex->line;
-    lex->bufUsed = 0;
-    lex->buffer[0] = '\0';
-    return tok;
-}
-
-void TOK_Delete( Token * tok )
-{
-    free( tok->text );
-    free( tok );
-}
-
-void TOK_Dump( Token * tok )
-{
-    printf( "%d\n", tok->type );
-    printf( "%s @line %d\n", tok->text, tok->line );
-}
-
 
 Lexer * LEX_New()
 {
@@ -155,6 +91,20 @@ void LEX_AddToBuffer( Lexer * lex, char c )
     lex->buffer[lex->bufUsed] = '\0';
 }
 
+void LEX_ClearBuffer( Lexer * lex )
+{
+    lex->bufUsed = 0;
+    lex->buffer[0] = '\0';
+}
+
+Token * LEX_AllocToken( Lexer * lex, int type )
+{
+    Token * tok = TOK_New( lex->buffer, type, lex->line );
+    LEX_ClearBuffer( lex );
+    
+    return tok;
+}
+
 Token * LEX_NextToken( Lexer * lex )
 {
     for( ;; ) 
@@ -195,7 +145,7 @@ Token * LEX_NextToken( Lexer * lex )
                         LEX_AddToBuffer( lex, ch ); 
                     }
                     
-                    Token * tok = TOK_New( lex, T_COMMENT );
+                    Token * tok = LEX_AllocToken( lex, T_COMMENT );
                     lex->line++;
                     
                     return tok;
@@ -231,7 +181,7 @@ Token * LEX_NextToken( Lexer * lex )
                         {
                             ch = LEX_Get( lex );
                             LEX_AddToBuffer( lex, ch );
-                            return TOK_New( lex, T_COMMENT );
+                            return LEX_AllocToken( lex, T_COMMENT );
                         }
                     }
                 }
@@ -257,7 +207,7 @@ Token * LEX_NextToken( Lexer * lex )
                 
                 if( ch == EOF ) 
                 {
-                    return TOK_New( lex, T_ERROR );
+                    return LEX_AllocToken( lex, T_ERROR );
                 } 
                 else if( ch == '\\' ) 
                 {
@@ -269,17 +219,17 @@ Token * LEX_NextToken( Lexer * lex )
                     } 
                     else 
                     {
-                        return TOK_New( lex, T_ERROR );
+                        return LEX_AllocToken( lex, T_ERROR );
                     }
                 } 
                 else if( ch == '"' ) 
                 {
                     LEX_AddToBuffer( lex, ch );
-                    return TOK_New( lex, T_STRING );
+                    return LEX_AllocToken( lex, T_STRING );
                 } 
                 else if( ch == '\n' ) 
                 {
-                    return TOK_New( lex, T_ERROR );
+                    return LEX_AllocToken( lex, T_ERROR );
                 } 
                 else 
                 {
@@ -325,7 +275,7 @@ Token * LEX_NextToken( Lexer * lex )
                         sprintf( lex->buffer, "%d", value );
                     }
                     
-                    Token * tok = TOK_New( lex, T_INT );
+                    Token * tok = LEX_AllocToken( lex, T_INT );
                     
                     if( ch == '\n' )
                     {
@@ -356,23 +306,23 @@ Token * LEX_NextToken( Lexer * lex )
             { 
                 if( strcmp( lex->buffer, "(" ) == 0 ) 
                 {
-                    return TOK_New( lex, T_OCBRACKET );
+                    return LEX_AllocToken( lex, T_OCBRACKET );
                 }
                 if( strcmp( lex->buffer, ")" ) == 0 ) 
                 {
-                    return TOK_New( lex, T_CCBRACKET );
+                    return LEX_AllocToken( lex, T_CCBRACKET );
                 }
                 if( strcmp( lex->buffer, "," ) == 0 ) 
                 {
-                    return TOK_New( lex, T_COMMA );
+                    return LEX_AllocToken( lex, T_COMMA );
                 }
                 if( strcmp( lex->buffer, "[" ) == 0 ) 
                 {
-                    return TOK_New( lex, T_OSBRACKET );
+                    return LEX_AllocToken( lex, T_OSBRACKET );
                 }
                 if( strcmp( lex->buffer, "]" ) == 0 ) 
                 {
-                    return TOK_New( lex, T_CSBRACKET );
+                    return LEX_AllocToken( lex, T_CSBRACKET );
                 }
             }
         }
@@ -392,47 +342,47 @@ Token * LEX_NextToken( Lexer * lex )
         {
             if( strcmp( lex->buffer, ":" ) == 0 ) 
             {
-                return TOK_New( lex, T_COLON );
+                return LEX_AllocToken( lex, T_COLON );
             }
             if( strcmp( lex->buffer, ">" ) == 0 ) 
             {
-                return TOK_New( lex, T_LARGER );
+                return LEX_AllocToken( lex, T_LARGER );
             }
             if( strcmp( lex->buffer, "<" ) == 0 ) 
             {
-                return TOK_New( lex, T_SMALLER );
+                return LEX_AllocToken( lex, T_SMALLER );
             }
             if( strcmp( lex->buffer, ">=" ) == 0 ) 
             {
-                return TOK_New( lex, T_LARGEREQ );
+                return LEX_AllocToken( lex, T_LARGEREQ );
             }
             if( strcmp( lex->buffer, "<=" ) == 0 ) 
             {
-                return TOK_New( lex, T_SMALLEREQ );
+                return LEX_AllocToken( lex, T_SMALLEREQ );
             }
             if( strcmp( lex->buffer, "=" ) == 0 ) 
             {
-                return TOK_New( lex, T_EQ );
+                return LEX_AllocToken( lex, T_EQ );
             }
             if( strcmp( lex->buffer, "<>" ) == 0 ) 
             {
-                return TOK_New( lex, T_NEQ );
+                return LEX_AllocToken( lex, T_NEQ );
             }            
             if( strcmp( lex->buffer, "+" ) == 0 ) 
             {
-                return TOK_New( lex, T_PLUS );
+                return LEX_AllocToken( lex, T_PLUS );
             }
             if( strcmp( lex->buffer, "-" ) == 0 ) 
             {
-                return TOK_New( lex, T_MINUS );
+                return LEX_AllocToken( lex, T_MINUS );
             }
             if( strcmp( lex->buffer, "*" ) == 0 ) 
             {
-                return TOK_New( lex, T_ASTERISK );
+                return LEX_AllocToken( lex, T_ASTERISK );
             }
             if( strcmp( lex->buffer, "/" ) == 0 ) 
             {
-                return TOK_New( lex, T_SLASH );
+                return LEX_AllocToken( lex, T_SLASH );
             }
         }
         
@@ -451,71 +401,71 @@ Token * LEX_NextToken( Lexer * lex )
         {            
             if( strcmp( lex->buffer, "if" ) == 0 ) 
             {
-                return TOK_New( lex, T_IF );
+                return LEX_AllocToken( lex, T_IF );
             }
             if( strcmp( lex->buffer, "else" ) == 0 ) 
             {
-                return TOK_New( lex, T_ELSE );
+                return LEX_AllocToken( lex, T_ELSE );
             }
             if( strcmp( lex->buffer, "end" ) == 0 ) 
             {
-                return TOK_New( lex, T_END );
+                return LEX_AllocToken( lex, T_END );
             }
             if( strcmp( lex->buffer, "while" ) == 0 ) 
             {
-                return TOK_New( lex, T_WHILE );
+                return LEX_AllocToken( lex, T_WHILE );
             }
             if( strcmp( lex->buffer, "loop" ) == 0 ) 
             {
-                return TOK_New( lex, T_LOOP );
+                return LEX_AllocToken( lex, T_LOOP );
             }
             if( strcmp( lex->buffer, "fun" ) == 0 ) 
             {
-                return TOK_New( lex, T_FUN );
+                return LEX_AllocToken( lex, T_FUN );
             }
             if( strcmp( lex->buffer, "return" ) == 0 ) 
             {
-                return TOK_New( lex, T_RETURN );
+                return LEX_AllocToken( lex, T_RETURN );
             }
             if( strcmp( lex->buffer, "new" ) == 0 ) 
             {
-                return TOK_New( lex, T_NEW );
+                return LEX_AllocToken( lex, T_NEW );
             }
             if( strcmp( lex->buffer, "string" ) == 0 ) 
             {
-                return TOK_New( lex, T_STRING );
+                return LEX_AllocToken( lex, T_STRING );
             }
             if( strcmp( lex->buffer, "int" ) == 0 ) 
             {
-                return TOK_New( lex, T_INT );
+                return LEX_AllocToken( lex, T_INT );
             }
             if( strcmp( lex->buffer, "char" ) == 0 ) 
             {
-                return TOK_New( lex, T_CHAR );
+                return LEX_AllocToken( lex, T_CHAR );
             }
             if( strcmp( lex->buffer, "bool" ) == 0 ) 
             {
-                return TOK_New( lex, T_BOOL );
+                return LEX_AllocToken( lex, T_BOOL );
             }
             if( strcmp( lex->buffer, "true" ) == 0 ) 
             {
-                return TOK_New( lex, T_TRUE );
+                return LEX_AllocToken( lex, T_TRUE );
             }
             if( strcmp( lex->buffer, "false" ) == 0 ) 
             {
-                return TOK_New( lex, T_FALSE );
+                return LEX_AllocToken( lex, T_FALSE );
             }
             if( strcmp( lex->buffer, "and" ) == 0 ) 
             {
-                return TOK_New( lex, T_AND );
+                return LEX_AllocToken( lex, T_AND );
             }
             if( strcmp( lex->buffer, "or" ) == 0 ) 
             {
-                return TOK_New( lex, T_OR );
+                return LEX_AllocToken( lex, T_OR );
             }
             if( strcmp( lex->buffer, "not" ) == 0 ) 
             {
-                return TOK_New( lex, T_NOT );
+                return LEX_AllocToken( lex, T_NOT );
             }
         }
         
@@ -529,16 +479,16 @@ Token * LEX_NextToken( Lexer * lex )
             {          
                 if( tr[i] != '_' && ( tr[i] < 'a' || tr[i] > 'z' ) && ( tr[i] < 'A' || tr[i] > 'Z' ) && !strchr( S_DECIMAL, tr[i] ) )
                 {                  
-                    return TOK_New( lex, T_ID );      
+                    return LEX_AllocToken( lex, T_ID );      
                 } 
             }
             
-            return TOK_New( lex, T_ID );
+            return LEX_AllocToken( lex, T_ID );
         }
         
         if( ch == EOF ) 
             return NULL;
             
-        return TOK_New( lex, T_ERROR ); 
+        return LEX_AllocToken( lex, T_ERROR ); 
     }
 }
