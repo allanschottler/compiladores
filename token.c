@@ -21,14 +21,43 @@ Token * TOK_New( char * text, int type, int line )
     return tok;
 }
 
-void TOK_Delete( Token * tok )
+void TOK_Delete( void * tok )
 {
-    free( tok->text );
-    free( tok );
+    Token * t = (Token*)tok;
+    free( t->text );
+    free( t );
 }
 
-void TOK_Dump( Token * tok )
+int TOK_Compare( Token * tok1, Token * tok2 )
 {
-    printf( "%d\n", tok->type );
-    printf( "%s @line %d\n", tok->text, tok->line );
+    return ( tok1->type == tok2->type );
+}
+
+void TOK_MatchError( Token * expected, Token * received )
+{
+    fprintf( stderr, "!Syntax Error [line %d]: expected Token type %d, received Token type %d instead.\n", received->line, expected->type, received->type );
+    
+    exit( EXIT_FAILURE );
+}
+
+void TOK_Dump( void * tok )
+{
+    Token * t = (Token*)tok;
+    printf( "%d\n", t->type );
+    printf( "%s @line %d\n", t->text, t->line );
+}
+
+int TOK_GetType( Token * tok )
+{
+    return tok->type;
+}
+
+char * TOK_GetText( Token * tok )
+{
+    return tok->text;
+}
+
+int TOK_GetLine( Token * tok )
+{
+    return tok->line;
 }
