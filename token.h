@@ -46,16 +46,19 @@
 
 typedef struct token Token;
 
-
-Token * TOK_New( char * text, int type, int line );
+/***** CALLBACKS *****/
 
 void TOK_Delete( void * tok );
 
-int TOK_Compare( Token * tok1, Token * tok2 );
+int TOK_IsType( void * tok, int type );
 
-void TOK_MatchError( Token * expected, Token * received );
+void TOK_MatchError( void * received, int expected );
 
-int TOK_GetType( Token * tok );
+int TOK_GetType( void * tok );
+
+/*********************/
+
+Token * TOK_New( char * text, int type, int line );
 
 char * TOK_GetText( Token * tok );
 

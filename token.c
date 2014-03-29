@@ -28,14 +28,16 @@ void TOK_Delete( void * tok )
     free( t );
 }
 
-int TOK_Compare( Token * tok1, Token * tok2 )
+int TOK_IsType( void * tok, int type )
 {
-    return ( tok1->type == tok2->type );
+    return ( ((Token*)tok)->type == type );
 }
 
-void TOK_MatchError( Token * expected, Token * received )
+void TOK_MatchError( void * received, int expected )
 {
-    fprintf( stderr, "!Syntax Error [line %d]: expected Token type %d, received Token type %d instead.\n", received->line, expected->type, received->type );
+    Token * r = ( Token * )received;
+    
+    fprintf( stderr, "!Syntax Error [line %d]: expected Token type %d, received Token type %d instead.\n", r->line, expected, r->type );
     
     exit( EXIT_FAILURE );
 }
@@ -47,9 +49,9 @@ void TOK_Dump( void * tok )
     printf( "%s @line %d\n", t->text, t->line );
 }
 
-int TOK_GetType( Token * tok )
+int TOK_GetType( void * tok )
 {
-    return tok->type;
+    return ((Token *)tok)->type;
 }
 
 char * TOK_GetText( Token * tok )

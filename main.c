@@ -2,7 +2,7 @@
 #include <stdlib.h>
 
 #include "lexer.h"
-#include "list.h"
+#include "parser.h"
 
 
 void errorLexer( Token * tok )
@@ -21,7 +21,7 @@ int main( int argc, char * argv[] )
 	}
 		
 	Lexer * lex = LEX_New();
-	List * list = LIS_New();
+	Parser * par = PAR_New();
 	
 	freopen( argv[1], "r", stdin );
 	
@@ -34,17 +34,23 @@ int main( int argc, char * argv[] )
             
         if( TOK_GetType( tok ) == T_ERROR )
         {
-            LIS_Delete( list, &TOK_Delete );
+            PAR_Delete( par );
             LEX_Delete( lex );
             errorLexer( tok );
+        }
+        
+        if( TOK_GetType( tok ) == T_COMMENT )
+        {
+            TOK_Delete( tok );
+            continue;
         }      
 
-        LIS_PushBack( list, tok );
+        PAR_Push( par, tok );
     }
 
-    LIS_Dump( list, &TOK_Dump );
+    PAR_Execute( par );
     
-    LIS_Delete( list, &TOK_Delete );
+    PAR_Delete( par );
     LEX_Delete( lex );
    
 	return 0;

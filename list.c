@@ -2,6 +2,7 @@
 
 #include "list.h"
 
+
 typedef struct node Node;
 
 struct node
@@ -34,6 +35,8 @@ void NOD_Delete( Node * node, void (*pfuncDelete)( void * ) )
     (*pfuncDelete)( node->info );    
     free( node );
 }
+
+void LIS_Advance( List * list );
 
 struct list
 {
@@ -81,17 +84,30 @@ void LIS_Advance( List * list )
     list->current = list->current->next;
 }
 
-void LIS_Match( List * list, void * info, int (*pfuncCmp)( void *, void * ), void (*pfuncError)( void *, void * ) )
+void LIS_Match( List * list, int info, int (*pfuncCmp)( void *, int ), void (*pfuncError)( void *, int ) )
 {
-    if( (*pfuncCmp)( info, list->current->info ) )
+    if( (*pfuncCmp)( list->current->info, info ) )
         LIS_Advance( list );
     else
-        (*pfuncError)( info, list->current->info );
+        (*pfuncError)( list->current->info, info );
 }
 
-void * LIS_Peek( List * list )
+int LIS_Peek( List * list, int (*pfuncIntEval)( void * ) )
 {
-    return list->current->next->info;
+    if( list->current )
+        return (*pfuncIntEval)( list->current->info );
+        
+    return -1;
+}
+
+int LIS_GetSize( List * list )
+{
+    return list->size;
+}
+
+void * LIS_GetCurrent( List * list )
+{
+    return list->current->info;
 }
 
 void LIS_Dump( List * list, void (*pfuncDump)( void * ) )
