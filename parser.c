@@ -24,7 +24,7 @@ void PAR_Error( Parser * par, const char * expected )
 {
     Token * curr = ( Token* )LIS_GetCurrent( par->tokens );
     
-    fprintf( stderr, "!Syntax Error [line %d]: expected %s, received %s instead.\n", TOK_GetLine( curr ), expected, TOK_GetText( curr ) );
+    fprintf( stderr, "!Syntax Error [line %d]: expected %s, received \'%s\' instead.\n", TOK_GetLine( curr ), expected, TOK_GetText( curr ) );
     
     exit( EXIT_FAILURE );
 } 
@@ -95,16 +95,30 @@ void PAR_ExpandGlobal( Parser * par )
     PAR_Match( par, T_NL );
 }
 
-void PAR_ExpandParam( Parser * par );
+void PAR_ExpandParam( Parser * par )
+{
+    PAR_ExpandDeclVar( par );
+}
 
 void PAR_ExpandParams( Parser * par )
+{    
+    PAR_ExpandParam( par );
+        
+    if( PAR_Peek( par ) == T_COMMA )
+    {
+        PAR_Match( par, T_COMMA );
+        PAR_ExpandParams( par );       
+    }
+}
+
+void PAR_ExpandCmd( Parser * par )
 {
 
 }
 
 void PAR_ExpandBlock( Parser * par )
 {
-    PAR_ExpandNewLine( par );
+//    if( PAR_Peek( par ) == T_ID )
 }
 
 void PAR_ExpandFunction( Parser * par )
@@ -113,7 +127,12 @@ void PAR_ExpandFunction( Parser * par )
     PAR_Match( par, T_FUN );
     PAR_Match( par, T_ID );
     PAR_Match( par, T_OCBRACKET );
-    //PAR_ExpandParams( par );
+    
+    if( PAR_Peek( par ) == T_ID )
+    { 
+        PAR_ExpandParams( par );
+    }
+    
     PAR_Match( par, T_CCBRACKET );
     
     if( PAR_Peek( par ) != T_NL )
@@ -159,8 +178,6 @@ void PAR_ExpandProgram( Parser * par )
         PAR_ExpandDecl( par );
     }
 }
-
-void PAR_ExpandCmd( Parser * par );
 
 void PAR_ExpandCmdIf( Parser * par );
 
