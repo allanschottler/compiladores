@@ -7,7 +7,7 @@
 
 void errorLexer( Token * tok )
 {
-    fprintf( stderr, "!Lexing Error [line %d]: Unidentified Token %s.\n", TOK_GetLine( tok ), TOK_GetText( tok ) );
+    fprintf( stderr, "!Lexing Error [line %d]: Unidentified Token \'%s\'.\n", TOK_GetLine( tok ), TOK_GetText( tok ) );
     
     exit( EXIT_FAILURE );
 }
@@ -43,11 +43,12 @@ int main( int argc, char * argv[] )
         {
             TOK_Delete( tok );
             continue;
-        }      
+        }              
 
         PAR_Push( par, tok );
     }
-
+    
+    //PAR_DumpTokens( par );
     PAR_Execute( par );
     
     PAR_Delete( par );

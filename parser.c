@@ -31,10 +31,18 @@ void PAR_Error( Parser * par, const char * expected )
 
 /********************************************************************/
 
+void PAR_ExpandNewLine( Parser * par )
+{    
+    if( PAR_Peek( par ) == T_NL )
+    {
+        PAR_Match( par, T_NL );        
+        PAR_ExpandNewLine( par );
+    }
+}
+
 void PAR_ExpandBaseType( Parser * par )
 {
-    printf("PAR: BaseType\n");
-    
+    printf("PAR: BaseType\n");    
     if( PAR_Peek( par ) == T_STRING )
     {
         PAR_Match( par, T_STRING );
@@ -84,11 +92,40 @@ void PAR_ExpandGlobal( Parser * par )
 {
     printf("PAR: Global\n");
     PAR_ExpandDeclVar( par );
+    PAR_Match( par, T_NL );
+}
+
+void PAR_ExpandParam( Parser * par );
+
+void PAR_ExpandParams( Parser * par )
+{
+
+}
+
+void PAR_ExpandBlock( Parser * par )
+{
+    PAR_ExpandNewLine( par );
 }
 
 void PAR_ExpandFunction( Parser * par )
 {
     printf("PAR: Function\n");
+    PAR_Match( par, T_FUN );
+    PAR_Match( par, T_ID );
+    PAR_Match( par, T_OCBRACKET );
+    //PAR_ExpandParams( par );
+    PAR_Match( par, T_CCBRACKET );
+    
+    if( PAR_Peek( par ) != T_NL )
+    {
+        PAR_Match( par, T_COLON );
+        PAR_ExpandType( par );
+    }
+    
+    PAR_ExpandNewLine( par );
+    //PAR_ExpandBlock( par );
+    PAR_Match( par, T_END );
+    PAR_ExpandNewLine( par );
 }
 
 void PAR_ExpandDecl( Parser * par )
@@ -102,6 +139,10 @@ void PAR_ExpandDecl( Parser * par )
     {
         PAR_ExpandGlobal( par );
     }
+    else if( PAR_Peek( par ) == T_NL )
+    {
+        PAR_ExpandNewLine( par );
+    }
     else
     {        
         PAR_Error( par, "function/global" );
@@ -111,17 +152,13 @@ void PAR_ExpandDecl( Parser * par )
 void PAR_ExpandProgram( Parser * par )
 {
     printf("PAR: Program\n");
+    PAR_ExpandNewLine( par );
+    
     while( PAR_Peek( par ) != -1 )
     {
         PAR_ExpandDecl( par );
     }
 }
-
-void PAR_ExpandBlock( Parser * par );
-
-void PAR_ExpandParams( Parser * par );
-
-void PAR_ExpandParam( Parser * par );
 
 void PAR_ExpandCmd( Parser * par );
 
@@ -165,4 +202,9 @@ void PAR_Execute( Parser * par )
 {
     if( LIS_GetSize( par->tokens ) )
         PAR_ExpandProgram( par );
+}
+
+void PAR_DumpTokens( Parser * par )
+{
+    LIS_Dump( par->tokens, &TOK_Dump );
 }

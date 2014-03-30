@@ -15,4 +15,6 @@ void PAR_Execute( Parser * par );
 
 void PAR_Push( Parser * par, Token * tok );
 
+void PAR_DumpTokens( Parser * par );
+
 #endif

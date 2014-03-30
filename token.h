@@ -42,6 +42,7 @@
 #define T_COMMENT   777
 #define T_ID        999
 #define T_ERROR     666
+#define T_NL        333
 
 
 typedef struct token Token;

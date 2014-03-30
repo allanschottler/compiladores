@@ -118,7 +118,10 @@ Token * LEX_NextToken( Lexer * lex )
             
             if( ch == '\n' ) 
             {
+                Token * tok = LEX_AllocToken( lex, T_NL );
                 lex->line++;
+                
+                return tok;
             }
             
             ch = LEX_Peek( lex );
@@ -131,6 +134,7 @@ Token * LEX_NextToken( Lexer * lex )
             LEX_AddToBuffer( lex, ch );
             char c = LEX_Peek( lex );
             
+            // Se nao, eh divisao
             if( c == '/' || c == '*' )
             {
                 for( ;; ) 
@@ -141,15 +145,17 @@ Token * LEX_NextToken( Lexer * lex )
                     if( ch == '/' ) 
                     {
                         LEX_AddToBuffer( lex, ch );
+                        ch = LEX_Peek( lex );
                         
                         while( ch != '\n' && ch != EOF ) 
-                        {
-                            ch = LEX_Get( lex );
-                            LEX_AddToBuffer( lex, ch ); 
+                        { 
+                            ch = LEX_Get( lex );                           
+                            LEX_AddToBuffer( lex, ch );
+                            ch = LEX_Peek( lex );
                         }
                         
                         Token * tok = LEX_AllocToken( lex, T_COMMENT );
-                        lex->line++;
+                        //lex->line++;
                         
                         return tok;
                     }
@@ -181,13 +187,16 @@ Token * LEX_NextToken( Lexer * lex )
                             }                        
                             
                             LEX_AddToBuffer( lex, ch );
-                            return LEX_AllocToken( lex, T_COMMENT );
+                            ch = LEX_Peek( lex );
+
+                            if( ch == '/' )
+                            {
+                                ch = LEX_Get( lex );
+                                LEX_AddToBuffer( lex, ch );
+                                return LEX_AllocToken( lex, T_COMMENT );
+                            }                            
                         }
-                    }
-                    else
-                    {
-                        break;
-                    }
+                    }                    
                 }
             }
         }
@@ -279,15 +288,7 @@ Token * LEX_NextToken( Lexer * lex )
                         sprintf( lex->buffer, "%d", value );
                     }                    
 
-                    Token * tok = LEX_AllocToken( lex, T_INT );
-                    
-                    if( ch == '\n' )
-                    {
-                        ch = LEX_Get( lex );
-                        lex->line++;
-                    }
-                    
-                    return tok;
+                    return LEX_AllocToken( lex, T_INT );
                 }
                 else 
                 {
