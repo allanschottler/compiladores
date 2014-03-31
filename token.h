@@ -38,6 +38,10 @@
 #define T_ASTERISK	31
 #define T_SLASH		32
 
+// Valores
+#define T_LITSTRING	33
+#define T_LITINT	34
+
 // Misc
 #define T_COMMENT   777
 #define T_ID        999
