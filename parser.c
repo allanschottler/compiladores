@@ -190,7 +190,7 @@ void PAR_ExpandCmdIf( Parser * par )
     PAR_Match( par, T_IF );
     PAR_ExpandExp( par );
     PAR_ExpandNewLine( par );
-    PAR_ExpandBlock( par );
+    PAR_ExpandBlock( par );   
     
     if( PAR_Peek( par ) == T_ELSE )
     {
@@ -242,7 +242,7 @@ void PAR_ExpandCmd( Parser * par )
     
     if( peeked == T_IF )
     {
-        PAR_ExpandCmdIf( par );
+        PAR_ExpandCmdIf( par );        
     }
     else if( peeked == T_WHILE )
     {
@@ -256,6 +256,8 @@ void PAR_ExpandCmd( Parser * par )
     {
         PAR_Error( par, "command", "Declare variables on block start." );
     }
+    
+    PAR_ExpandNewLine( par );
 }
 
 void PAR_ExpandBlock( Parser * par )
@@ -283,7 +285,7 @@ void PAR_ExpandBlock( Parser * par )
     }
 
     //CMDs
-    peeked = PAR_Peek( par );
+    peeked = PAR_Peek( par );    
     
     if( peeked == T_EQ || peeked == T_OSBRACKET )
     {
@@ -324,6 +326,8 @@ void PAR_ExpandBlock( Parser * par )
         
         peeked = PAR_Peek( par );
     }
+    
+    PAR_ExpandNewLine( par );
 }
 
 void PAR_ExpandFunction( Parser * par )
