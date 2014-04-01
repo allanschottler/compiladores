@@ -24,11 +24,11 @@ void PAR_Match( Parser * par, int type )
     LIS_Match( par->tokens, type, &TOK_IsType, &TOK_MatchError );
 }
 
-void PAR_Error( Parser * par, const char * expected )
+void PAR_Error( Parser * par, const char * expected, const char * tip )
 {
     Token * curr = ( Token* )LIS_GetCurrent( par->tokens );
     
-    fprintf( stderr, "!Syntax Error [line %d]: expected %s, received \'%s\' instead.\n", TOK_GetLine( curr ), expected, TOK_GetText( curr ) );
+    fprintf( stderr, "!Syntax Error [line %d]: expected %s, received \'%s\' instead.\nTIP: %s\n", TOK_GetLine( curr ), expected, TOK_GetText( curr ), tip );
     
     exit( EXIT_FAILURE );
 } 
@@ -67,7 +67,7 @@ void PAR_ExpandBaseType( Parser * par )
     }
     else
     {
-        PAR_Error( par, "string/char/int/bool" );
+        PAR_Error( par, "string/char/int/bool", "Did you declare base type?" );
     }
 }
 
@@ -122,7 +122,7 @@ void PAR_ExpandParams( Parser * par )
 
 void PAR_ExpandExp( Parser * par )
 {
-    printf("PAR: Exp\n");
+    /*printf("PAR: Exp\n");
     int peeked = PAR_Peek( par );
     
     while( peeked != T_COMMA && peeked != T_CCBRACKET )
@@ -152,7 +152,7 @@ void PAR_ExpandExp( Parser * par )
         {
             PAR_Match( par, T_NEW );
         }
-    }
+    }*/
 }
 
 void PAR_ExpandExps( Parser * par )
@@ -221,7 +221,7 @@ void PAR_ExpandCmdReturn( Parser * par )
 
 void PAR_ExpandCmdAssign( Parser * par )
 {
-    printf("PAR: CmdAssign\n");
+    printf("PAR: CmdAssign\n");       
     PAR_ExpandVar( par );
     PAR_Match( par, T_EQ );
     PAR_ExpandExp( par );
@@ -254,13 +254,13 @@ void PAR_ExpandCmd( Parser * par )
     }
     else
     {
-        PAR_Error( par, "command" );
+        PAR_Error( par, "command", "Declare variables on block start." );
     }
 }
 
 void PAR_ExpandBlock( Parser * par )
 {
-    printf("PAR: Block\n");
+    printf("PAR: Block\n");    
     int peeked = PAR_Peek( par );
     
     //Declvar
@@ -285,7 +285,7 @@ void PAR_ExpandBlock( Parser * par )
     //CMDs
     peeked = PAR_Peek( par );
     
-    if( peeked == T_EQ )
+    if( peeked == T_EQ || peeked == T_OSBRACKET )
     {
         PAR_ExpandCmdAssign( par );
         PAR_ExpandNewLine( par );
@@ -306,7 +306,7 @@ void PAR_ExpandBlock( Parser * par )
             
             peeked = PAR_Peek( par );
             
-            if( peeked == T_EQ )
+            if( peeked == T_EQ || peeked == T_OSBRACKET )
             {
                 PAR_ExpandCmdAssign( par );
                 PAR_ExpandNewLine( par );
@@ -321,6 +321,8 @@ void PAR_ExpandBlock( Parser * par )
         {
             PAR_ExpandCmd( par );
         }
+        
+        peeked = PAR_Peek( par );
     }
 }
 
@@ -369,7 +371,7 @@ void PAR_ExpandDecl( Parser * par )
     }
     else
     {        
-        PAR_Error( par, "function/global" );
+        PAR_Error( par, "function/global", "" );
     }
 }
 
