@@ -86,10 +86,15 @@ void LIS_Advance( List * list )
 
 void LIS_Match( List * list, int info, int (*pfuncCmp)( void *, int ), void (*pfuncError)( void *, int ) )
 {
+	if( list->current == NULL )
+    	(*pfuncError)( NULL, info );
+    	
     if( (*pfuncCmp)( list->current->info, info ) )
         LIS_Advance( list );
     else
         (*pfuncError)( list->current->info, info );
+        
+    
 }
 
 int LIS_Peek( List * list, int (*pfuncIntEval)( void * ) )
@@ -107,7 +112,10 @@ int LIS_GetSize( List * list )
 
 void * LIS_GetCurrent( List * list )
 {
-    return list->current->info;
+	if( list->current )
+	    return list->current->info;
+	    
+	return NULL;
 }
 
 void LIS_Dump( List * list, void (*pfuncDump)( void * ) )

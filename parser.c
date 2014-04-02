@@ -28,7 +28,14 @@ void PAR_Error( Parser * par, const char * expected, const char * tip )
 {
     Token * curr = ( Token* )LIS_GetCurrent( par->tokens );
     
-    fprintf( stderr, "!Syntax Error [line %d]: expected %s, received \'%s\' instead.\nTIP: %s\n", TOK_GetLine( curr ), expected, TOK_GetText( curr ), tip );
+    if( curr )
+    {
+    	fprintf( stderr, "!Syntax Error [line %d]: expected %s, received \'%s\' instead.\nTIP: %s\n", TOK_GetLine( curr ), expected, TOK_GetText( curr ), tip );
+    }
+    else
+    {
+    	fprintf( stderr, "!Syntax Error: expected %s, received EOF instead.\nTIP: %s\n", expected, tip );
+    }
     
     exit( EXIT_FAILURE );
 } 
@@ -326,7 +333,7 @@ void PAR_ExpandCmd( Parser * par )
         PAR_ExpandCmdReturn( par );    
     }
     else
-    {
+    {    	
         PAR_Error( par, "command", "Declare variables on block start." );
     }
     

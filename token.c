@@ -37,7 +37,14 @@ void TOK_MatchError( void * received, int expected )
 {
     Token * r = ( Token * )received;
     
-    fprintf( stderr, "!Syntax Error [line %d]: expected Token type %d, received Token type %d instead.\n", r->line, expected, r->type );
+    if( r )
+    {
+    	fprintf( stderr, "!Syntax Error [line %d]: expected Token type %d, received Token type %d instead.\n", r->line, expected, r->type );
+    }
+    else
+    {
+    	fprintf( stderr, "!Syntax Error: expected Token type %d, received EOF instead.\n", expected );
+    }
     
     exit( EXIT_FAILURE );
 }
