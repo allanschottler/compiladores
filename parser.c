@@ -122,37 +122,87 @@ void PAR_ExpandParams( Parser * par )
 
 void PAR_ExpandExp( Parser * par )
 {
-    /*printf("PAR: Exp\n");
-    int peeked = PAR_Peek( par );
+    printf("PAR: Exp\n");
+    int foundFirstTerminal = 0;
+    int peeked = PAR_Peek( par );    
     
-    while( peeked != T_COMMA && peeked != T_CCBRACKET )
-    {
+    while( peeked != T_COMMA && peeked != T_CCBRACKET && peeked != T_CSBRACKET && peeked != T_NL )
+    {  
+        //printf("PEEKED: %d\n", peeked);          
         if( peeked == T_ID )
         {
             PAR_Match( par, T_ID );
-            PAR_ExpandVar( par );
+            
+            if( PAR_Peek( par ) == T_OCBRACKET )
+            {
+                PAR_ExpandCall( par );
+            }
+            else
+            {
+                PAR_ExpandVar( par );
+            }  
+            
+            foundFirstTerminal = 1;  
         }
-        else if( peeked == T_LITINT )
+        else if( peeked == T_LITINT || peeked == T_LITSTRING || peeked == T_TRUE || peeked == T_TRUE )
         {
-            PAR_Match( par, T_LITINT );
-        }
-        else if( peeked == T_LITSTRING )
-        {
-            PAR_Match( par, T_LITSTRING );
-        }
-        else if( peeked == T_TRUE )
-        {
-            PAR_Match( par, T_TRUE );
-        }
-        else if( peeked == T_FALSE )
-        {
-            PAR_Match( par, T_FALSE );
-        }
+            PAR_Match( par, peeked );
+            
+            foundFirstTerminal = 1;
+        }       
         else if( peeked == T_NEW )
         {
             PAR_Match( par, T_NEW );
+            PAR_Match( par, T_OSBRACKET );
+            PAR_ExpandExp( par );
+            PAR_Match( par, T_CSBRACKET );
+            PAR_ExpandType( par ); 
+            
+            foundFirstTerminal = 1;           
         }
-    }*/
+        else if( peeked == T_OCBRACKET )
+        {            
+            PAR_Match( par, T_OCBRACKET );
+            PAR_ExpandExp( par );
+            PAR_Match( par, T_CCBRACKET );
+            
+            foundFirstTerminal = 1;                        
+        }
+        else if( peeked == T_NOT )
+        {
+            PAR_Match( par, T_NOT );
+            PAR_ExpandExp( par );
+            
+            foundFirstTerminal = 1;
+        }
+        else if( peeked == T_MINUS )
+        {
+            PAR_Match( par, T_MINUS );
+            PAR_ExpandExp( par );
+            
+            foundFirstTerminal = 1;
+        }
+        
+        peeked = PAR_Peek( par );
+        
+        if( foundFirstTerminal )
+        {
+            if( peeked == T_PLUS || peeked == T_MINUS || peeked == T_SLASH || peeked == T_ASTERISK || peeked == T_EQ || peeked == T_NEQ || peeked == T_LARGER || peeked == T_LARGEREQ || peeked == T_SMALLER || peeked == T_SMALLEREQ || peeked == T_AND || peeked == T_OR )
+            {
+                PAR_Match( par, peeked );
+                PAR_ExpandExp( par );
+            }
+            else if( peeked != T_COMMA && peeked != T_CCBRACKET && peeked != T_CSBRACKET && peeked != T_NL )
+            {
+                PAR_Error( par, "operator", "Missing operator?" );
+            }   
+        }
+        
+        peeked = PAR_Peek( par );
+    }
+    
+    if( peeked == T_NL && !foundFirstTerminal )
+        PAR_Error( par, "expression", "Missing expression?" );
 }
 
 void PAR_ExpandExps( Parser * par )
@@ -211,12 +261,25 @@ void PAR_ExpandCmdIf( Parser * par )
 
 void PAR_ExpandCmdWhile( Parser * par )
 {
-    printf("PAR: While\n");
+    printf("PAR: CmdWhile\n");
+    PAR_Match( par, T_WHILE );
+    PAR_ExpandExp( par );
+    PAR_ExpandNewLine( par );
+    PAR_ExpandBlock( par );
+    PAR_Match( par, T_LOOP );    
 }
 
 void PAR_ExpandCmdReturn( Parser * par )
 {
-    printf("PAR: Return\n");
+    printf("PAR: CmdReturn\n");
+    PAR_Match( par, T_RETURN );
+    
+    if( PAR_Peek( par ) != T_NL )
+    {
+        PAR_ExpandExp( par );
+    }
+    
+    PAR_ExpandNewLine( par );
 }
 
 void PAR_ExpandCmdAssign( Parser * par )
@@ -238,6 +301,8 @@ void PAR_ExpandCall( Parser * par )
 void PAR_ExpandCmd( Parser * par )
 {
     printf("PAR: Cmd\n");
+    PAR_ExpandNewLine( par );
+    
     int peeked = PAR_Peek( par );
     
     if( peeked == T_IF )

@@ -134,7 +134,6 @@ Token * LEX_NextToken( Lexer * lex )
             LEX_AddToBuffer( lex, ch );
             char c = LEX_Peek( lex );
             
-            // Se nao, eh divisao
             if( c == '/' || c == '*' )
             {
                 for( ;; ) 
@@ -148,10 +147,10 @@ Token * LEX_NextToken( Lexer * lex )
                         ch = LEX_Peek( lex );
                         
                         while( ch != '\n' && ch != EOF ) 
-                        { 
-                            ch = LEX_Get( lex );                           
+                        {
+                            ch = LEX_Get( lex );
                             LEX_AddToBuffer( lex, ch );
-                            ch = LEX_Peek( lex );
+                            ch = LEX_Peek( lex ); 
                         }
                         
                         Token * tok = LEX_AllocToken( lex, T_COMMENT );
@@ -188,15 +187,19 @@ Token * LEX_NextToken( Lexer * lex )
                             
                             LEX_AddToBuffer( lex, ch );
                             ch = LEX_Peek( lex );
-
+                            
                             if( ch == '/' )
                             {
                                 ch = LEX_Get( lex );
                                 LEX_AddToBuffer( lex, ch );
                                 return LEX_AllocToken( lex, T_COMMENT );
-                            }                            
+                            }
                         }
-                    }                    
+                    }
+                    else
+                    {
+                        break;
+                    }
                 }
             }
         }
@@ -238,7 +241,7 @@ Token * LEX_NextToken( Lexer * lex )
                 else if( ch == '"' ) 
                 {
                     LEX_AddToBuffer( lex, ch );
-                    return LEX_AllocToken( lex, T_STRING );
+                    return LEX_AllocToken( lex, T_LITSTRING );
                 } 
                 else if( ch == '\n' ) 
                 {
@@ -286,9 +289,9 @@ Token * LEX_NextToken( Lexer * lex )
                     {
                         int value = strtol( lex->buffer, NULL, 16 );
                         sprintf( lex->buffer, "%d", value );
-                    }                    
-
-                    return LEX_AllocToken( lex, T_INT );
+                    }
+                    
+                    return LEX_AllocToken( lex, T_LITINT );
                 }
                 else 
                 {
@@ -342,57 +345,62 @@ Token * LEX_NextToken( Lexer * lex )
             }
                 
             ch = LEX_Get( lex );
-            LEX_AddToBuffer( lex, ch );            
-
-            if( ch == EOF ) 
-                return NULL;            
-        }
-        
-        if( lex->bufUsed > 0 ) 
-        {
-            if( strcmp( lex->buffer, ":" ) == 0 ) 
-            {
-                return LEX_AllocToken( lex, T_COLON );
-            }
-            if( strcmp( lex->buffer, ">" ) == 0 ) 
-            {
-                return LEX_AllocToken( lex, T_LARGER );
-            }
-            if( strcmp( lex->buffer, "<" ) == 0 ) 
-            {
+            LEX_AddToBuffer( lex, ch );
+            
+            if( ch == '<' )
+            {   
+                char c = LEX_Peek( lex );
+                
+                if( c == '=' )
+                {
+                    ch = LEX_Get( lex );
+                    LEX_AddToBuffer( lex, ch );
+                    return LEX_AllocToken( lex, T_SMALLEREQ );
+                }
+                else if( c == '>' )
+                {
+                    ch = LEX_Get( lex );
+                    LEX_AddToBuffer( lex, ch );
+                    return LEX_AllocToken( lex, T_NEQ );
+                }
+                
                 return LEX_AllocToken( lex, T_SMALLER );
-            }
-            if( strcmp( lex->buffer, ">=" ) == 0 ) 
-            {
-                return LEX_AllocToken( lex, T_LARGEREQ );
-            }
-            if( strcmp( lex->buffer, "<=" ) == 0 ) 
-            {
-                return LEX_AllocToken( lex, T_SMALLEREQ );
-            }
-            if( strcmp( lex->buffer, "=" ) == 0 ) 
-            {
-                return LEX_AllocToken( lex, T_EQ );
-            }
-            if( strcmp( lex->buffer, "<>" ) == 0 ) 
-            {
-                return LEX_AllocToken( lex, T_NEQ );
             }            
-            if( strcmp( lex->buffer, "+" ) == 0 ) 
+            else if( ch == '>' )
             {
-                return LEX_AllocToken( lex, T_PLUS );
-            }
-            if( strcmp( lex->buffer, "-" ) == 0 ) 
-            {
-                return LEX_AllocToken( lex, T_MINUS );
-            }
-            if( strcmp( lex->buffer, "*" ) == 0 ) 
-            {
-                return LEX_AllocToken( lex, T_ASTERISK );
+                char c = LEX_Peek( lex );
+                
+                if( c == '=' )
+                {
+                    ch = LEX_Get( lex );
+                    LEX_AddToBuffer( lex, ch );
+                    return LEX_AllocToken( lex, T_LARGEREQ );
+                }
+                
+                return LEX_AllocToken( lex, T_LARGER );
             }
             else
             {
-                return LEX_AllocToken( lex, T_SLASH );
+                if( strcmp( lex->buffer, ":" ) == 0 ) 
+                {
+                    return LEX_AllocToken( lex, T_COLON );
+                }
+                if( strcmp( lex->buffer, "+" ) == 0 ) 
+                {
+                    return LEX_AllocToken( lex, T_PLUS );
+                }
+                if( strcmp( lex->buffer, "-" ) == 0 ) 
+                {
+                    return LEX_AllocToken( lex, T_MINUS );
+                }
+                if( strcmp( lex->buffer, "*" ) == 0 ) 
+                {
+                    return LEX_AllocToken( lex, T_ASTERISK );
+                } 
+                if( strcmp( lex->buffer, "=" ) == 0 ) 
+                {
+                    return LEX_AllocToken( lex, T_EQ );
+                }               
             }
             
             // Nao tratou algum char em S_OPERATOR
@@ -491,8 +499,8 @@ Token * LEX_NextToken( Lexer * lex )
             for( i = 0; i < lex->bufUsed; ++i ) 
             {          
                 if( !( tr[i] == '_' || ( ( tr[i] >= 'a' && tr[i] <= 'z' ) || ( tr[i] >= 'A' && tr[i] <= 'Z' ) || strchr( S_DECIMAL, tr[i] ) ) ) )
-                {
-                    return LEX_AllocToken( lex, T_ID );      
+                {                  
+                    return LEX_AllocToken( lex, T_ERROR );      
                 } 
             }
             
