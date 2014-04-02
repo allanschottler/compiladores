@@ -201,7 +201,7 @@ void PAR_ExpandExp( Parser * par )
         peeked = PAR_Peek( par );
     }
     
-    if( peeked == T_NL && !foundFirstTerminal )
+    if( ( peeked == T_COMMA || peeked == T_CCBRACKET || peeked == T_NL ) && !foundFirstTerminal )
         PAR_Error( par, "expression", "Missing expression?" );
 }
 
