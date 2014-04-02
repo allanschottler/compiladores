@@ -127,8 +127,7 @@ void PAR_ExpandExp( Parser * par )
     int peeked = PAR_Peek( par );    
     
     while( peeked != T_COMMA && peeked != T_CCBRACKET && peeked != T_CSBRACKET && peeked != T_NL )
-    {  
-        //printf("PEEKED: %d\n", peeked);          
+    {                   
         if( peeked == T_ID )
         {
             PAR_Match( par, T_ID );
@@ -205,7 +204,7 @@ void PAR_ExpandExp( Parser * par )
         peeked = PAR_Peek( par );
     }
     
-    if( ( peeked == T_COMMA || peeked == T_CCBRACKET || peeked == T_NL ) && !foundFirstTerminal )
+    if( ( peeked == T_COMMA || peeked == T_CCBRACKET || peeked == T_CSBRACKET || peeked == T_NL ) && !foundFirstTerminal )
         PAR_Error( par, "expression", "Missing expression?" );
 }
 
@@ -241,19 +240,24 @@ void PAR_ExpandVar( Parser * par )
 void PAR_ExpandCmdIf( Parser * par )
 {
     printf("PAR: CmdIf\n");
+    int foundElse = 0;
     PAR_Match( par, T_IF );
     PAR_ExpandExp( par );
     PAR_ExpandNewLine( par );
     PAR_ExpandBlock( par );   
     
-    if( PAR_Peek( par ) == T_ELSE )
+    while( PAR_Peek( par ) == T_ELSE && !foundElse )
     {
         PAR_Match( par, T_ELSE );
         
-        if( PAR_Peek( par ) != T_NL )
+        if( PAR_Peek( par ) == T_IF )
         {
             PAR_Match( par, T_IF );
             PAR_ExpandExp( par );            
+        }
+        else
+        {
+        	foundElse = 1;
         }
         
         PAR_ExpandNewLine( par );
@@ -371,37 +375,35 @@ void PAR_ExpandBlock( Parser * par )
     	    PAR_ExpandNewLine( par );
     	}
 	}
-    else
-    {    
-    	peeked = PAR_Peek( par );
+        
+    peeked = PAR_Peek( par );
     
-    	while( peeked != T_END && peeked != T_LOOP && peeked != T_ELSE )
-    	{        
-	        if( peeked == T_ID )
-	        {
-	            PAR_Match( par, T_ID );
+    while( peeked != T_END && peeked != T_LOOP && peeked != T_ELSE )
+    {        
+		if( peeked == T_ID )
+	    {
+	    	PAR_Match( par, T_ID );
 	            
-	            peeked = PAR_Peek( par );
-	            
-	            if( peeked == T_EQ || peeked == T_OSBRACKET )
-	            {
-	                PAR_ExpandCmdAssign( par );
-	                PAR_ExpandNewLine( par );
-	            }
-	            else if( peeked == T_OCBRACKET )
-	            {
-	                PAR_ExpandCall( par );
-	                PAR_ExpandNewLine( par );
-	            }
-	        }
-	        else
-	        {
-	            PAR_ExpandCmd( par );
-	        }
-	        
 	        peeked = PAR_Peek( par );
+	           
+	        if( peeked == T_EQ || peeked == T_OSBRACKET )
+	        {
+	            PAR_ExpandCmdAssign( par );
+	            PAR_ExpandNewLine( par );
+	        }
+	        else if( peeked == T_OCBRACKET )
+	        {
+	            PAR_ExpandCall( par );
+	            PAR_ExpandNewLine( par );
+	        }
 	    }
-    }
+	    else
+	    {
+	        PAR_ExpandCmd( par );
+	    }
+	       
+	    peeked = PAR_Peek( par );
+	}    
     
     PAR_ExpandNewLine( par );
 }
