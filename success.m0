@@ -1,0 +1,68 @@
+global1:string
+global2:int
+
+fun calculate( a:int, b:int, op:string ) : int
+
+    if op="+"
+        return a+b
+    else if op="-"
+        return a-b
+    else if op="*"
+        return a*b
+    else if op="/"
+        if b<>0
+            return a/b
+        else
+            return error
+        end
+    else
+        return error
+    end
+
+end
+
+fun product( a:int, n:int ) : int
+
+    r:int
+    i:int
+    cool:bool
+    i=0
+    r=a
+    
+    cool=true or (not false)
+    
+    while i<(n-1)
+        r=r*a 
+        i=i+1       
+    loop
+    
+    this( cool )
+    that( not cool )
+    
+    return r
+    
+end
+
+global3:int
+
+fun main( argc:int, argv:[]string )
+
+    a:int
+    b:int
+    o:string
+    res:[]int    
+    
+    a=argv[1]
+    o=argv[2]
+    b=argv[3]
+    
+    global1="a"+"string"+"cuz"+"y"+"not"
+    global2=b
+    
+    res = new[3]int
+    
+    global3 = calculate(a,b,o)
+    
+    global3= -global3-global2-(-global1)-global2
+
+end
