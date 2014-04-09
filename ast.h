@@ -13,15 +13,17 @@
 #define A_CALL		6
 #define A_FUNCTION	7
 #define A_RETURN	8
+#define A_BLOCK		9
+#define A_ID		10
 
 typedef struct ast Ast;
 
 
-Ast * AST_New();
+Ast * AST_New( List * tokens );
 
 void AST_Delete( Ast * ast );
 
-void AST_Build( List * tokens );
+void AST_Build( Ast * ast );
 
 
 #endif
