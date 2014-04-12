@@ -15,15 +15,20 @@
 #define A_RETURN	8
 #define A_BLOCK		9
 #define A_ID		10
+#define A_VAR       11
+#define A_ARGS      12
 
 typedef struct ast Ast;
 
 
-Ast * AST_New( List * tokens );
+Ast * AST_New();
 
 void AST_Delete( Ast * ast );
 
-void AST_Build( Ast * ast );
+void AST_AddChildTree( Ast * parent, Ast * child );
 
+void AST_AddChildNode( Ast * parent, int type, char * text );
+
+void AST_Dump( Ast * ast );
 
 #endif

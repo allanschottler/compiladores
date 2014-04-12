@@ -1,2 +1,52 @@
-//myvar : []int //output1.txt
-myvar  []int
+myglobalvar :[][]int
+
+fun lol():int
+
+    if i=1    
+        
+        i:int
+        s:string
+        
+        s="u"
+        lol()
+    
+    else
+        
+        lol()
+        
+    end
+    
+    while (1+2)<>3
+    
+        this:char
+        
+        if (this=that(2, 2))and that<>2/5+(2--2)
+            that:int
+        else
+            something()
+        end
+    loop
+    
+    return 1+(2)   
+    
+end
+
+fun main(argc:int, argv:[][]char)
+
+    i:[]int
+    a:[]string
+        
+    b:[]char    
+    c:bool    
+    d:[]bool
+        
+    d1:[][][][]char
+    
+    lol()    
+    
+    //c=true or false
+    
+    a[2]= "a"
+    
+    lol()
+end

@@ -39,7 +39,7 @@ void TOK_MatchError( void * received, int expected )
     
     if( r )
     {
-    	fprintf( stderr, "!Syntax Error [line %d]: expected Token type %d, received Token type %d instead.\n", r->line, expected, r->type );
+    	fprintf( stderr, "!Syntax Error [line %d]: expected Token type %d, received \'%s\' instead.\n", r->line, expected, TOK_GetText( r ) );
     }
     else
     {
@@ -70,3 +70,4 @@ int TOK_GetLine( Token * tok )
 {
     return tok->line;
 }
+
