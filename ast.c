@@ -112,6 +112,10 @@ char * ASN_ToString( int type )
             
         case 12:
             strcpy( str, "Args" );        
+            break;
+            
+        case 13:
+            strcpy( str, "Params" );        
             break;               
                                                                                                                                                             
     }

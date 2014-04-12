@@ -17,6 +17,7 @@
 #define A_ID		10
 #define A_VAR       11
 #define A_ARGS      12
+#define A_PARAMS      13
 
 typedef struct ast Ast;
 

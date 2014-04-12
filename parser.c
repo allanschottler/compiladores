@@ -13,6 +13,7 @@ struct parser
 {
     List * tokens;
     Ast * ast;
+    Token * lastMatched;
 };
 
 int PAR_Peek( Parser * par )
@@ -22,7 +23,7 @@ int PAR_Peek( Parser * par )
 
 void PAR_Match( Parser * par, int type )
 {
-    LIS_Match( par->tokens, type, &TOK_IsType, &TOK_MatchError );
+    par->lastMatched = LIS_Match( par->tokens, type, &TOK_IsType, &TOK_MatchError );
 }
 
 void PAR_Error( Parser * par, const char * expected, const char * tip )
@@ -54,7 +55,7 @@ void PAR_ExpandNewLine( Parser * par )
 
 Ast * PAR_ExpandBaseType( Parser * par )
 {
-    printf("PAR: BaseType\n");
+    //printf("PAR: BaseType\n");
     Ast * ast = AST_New();
     int peeked = PAR_Peek( par );
         
@@ -88,7 +89,7 @@ Ast * PAR_ExpandBaseType( Parser * par )
 
 Ast * PAR_ExpandType( Parser * par )
 {
-    printf("PAR: Type\n");
+    //printf("PAR: Type\n");
     Ast * ast = AST_New();
     
     AST_AddChildNode( ast, A_TYPE, NULL );
@@ -107,7 +108,7 @@ Ast * PAR_ExpandType( Parser * par )
 
 Ast * PAR_ExpandDeclVar( Parser * par )
 {
-    printf("PAR: DeclVar\n");
+    //printf("PAR: DeclVar\n");
     Ast * ast = AST_New();
     AST_AddChildNode( ast, A_DECLVAR, NULL );
         
@@ -119,7 +120,7 @@ Ast * PAR_ExpandDeclVar( Parser * par )
 
 Ast * PAR_ExpandGlobal( Parser * par )
 {
-    printf("PAR: Global\n");
+    //printf("PAR: Global\n");
     Ast * ast;
     
     PAR_Match( par, T_ID );
@@ -131,21 +132,24 @@ Ast * PAR_ExpandGlobal( Parser * par )
 
 Ast * PAR_ExpandParam( Parser * par )
 {
-    printf("PAR: Param\n");
+    //printf("PAR: Param\n");
     Ast * ast;
+    Token * matchedId;
         
-    PAR_Match( par, T_ID );    
+    PAR_Match( par, T_ID ); 
+    matchedId = par->lastMatched;
+       
     ast = PAR_ExpandDeclVar( par );
-    //Add ID
+    AST_AddChildNode( ast, A_ID, TOK_GetText( matchedId ) );
     
     return ast;
 }
 
 Ast * PAR_ExpandParams( Parser * par )
 {
-    printf("PAR: Params\n");    
+    //printf("PAR: Params\n");    
     Ast * ast = AST_New();
-    AST_AddChildNode( ast, A_BLOCK, NULL );
+    AST_AddChildNode( ast, A_PARAMS, NULL );
     
     AST_AddChildTree( ast, PAR_ExpandParam( par ) );
         
@@ -160,7 +164,7 @@ Ast * PAR_ExpandParams( Parser * par )
 
 Ast * PAR_ExpandExp( Parser * par )
 {
-    printf("PAR: Exp\n");
+    //printf("PAR: Exp\n");
     Ast * ast = AST_New();
     int foundFirstTerminal = 0;
     int peeked = PAR_Peek( par );    
@@ -253,7 +257,7 @@ Ast * PAR_ExpandExp( Parser * par )
 
 Ast * PAR_ExpandExps( Parser * par )
 {
-    printf("PAR: Exps\n");
+    //printf("PAR: Exps\n");
     Ast * ast = AST_New();
     int peeked = PAR_Peek( par );
     
@@ -276,7 +280,7 @@ Ast * PAR_ExpandExps( Parser * par )
 
 Ast * PAR_ExpandVar( Parser * par )
 {
-    printf("PAR: Var\n");
+    //printf("PAR: Var\n");
     Ast * ast = AST_New();
     
     AST_AddChildNode( ast, A_VAR, NULL );
@@ -293,7 +297,7 @@ Ast * PAR_ExpandVar( Parser * par )
 
 Ast * PAR_ExpandCmdIf( Parser * par )
 {
-    printf("PAR: CmdIf\n");
+    //printf("PAR: CmdIf\n");
     Ast * ast = AST_New();
     int foundElse = 0;
     
@@ -329,7 +333,7 @@ Ast * PAR_ExpandCmdIf( Parser * par )
 
 Ast * PAR_ExpandCmdWhile( Parser * par )
 {
-    printf("PAR: CmdWhile\n");
+    //printf("PAR: CmdWhile\n");
     Ast * ast = AST_New();
     AST_AddChildNode( ast, A_WHILE, NULL );
     
@@ -344,7 +348,7 @@ Ast * PAR_ExpandCmdWhile( Parser * par )
 
 Ast * PAR_ExpandCmdReturn( Parser * par )
 {
-    printf("PAR: CmdReturn\n");
+    //printf("PAR: CmdReturn\n");
     Ast * ast = AST_New();
     AST_AddChildNode( ast, A_RETURN, NULL );
     
@@ -362,7 +366,7 @@ Ast * PAR_ExpandCmdReturn( Parser * par )
 
 Ast * PAR_ExpandCmdAssign( Parser * par )
 {
-    printf("PAR: CmdAssign\n");
+    //printf("PAR: CmdAssign\n");
     Ast * ast = AST_New();
     AST_AddChildNode( ast, A_ASSIGN, NULL );
            
@@ -375,7 +379,7 @@ Ast * PAR_ExpandCmdAssign( Parser * par )
 
 Ast * PAR_ExpandCall( Parser * par )
 {
-    printf("PAR: Call\n");
+    //printf("PAR: Call\n");
     Ast * ast = AST_New();
     AST_AddChildNode( ast, A_CALL, NULL );
     
@@ -388,7 +392,7 @@ Ast * PAR_ExpandCall( Parser * par )
 
 Ast * PAR_ExpandCmd( Parser * par )
 {
-    printf("PAR: Cmd\n");
+    //printf("PAR: Cmd\n");
     Ast * ast;
     
     PAR_ExpandNewLine( par );
@@ -419,9 +423,10 @@ Ast * PAR_ExpandCmd( Parser * par )
 
 Ast * PAR_ExpandBlock( Parser * par )
 {
-    printf("PAR: Block\n");
+    //printf("PAR: Block\n");
     Ast * ast = AST_New();
-    Ast * subAst;    
+    Ast * subAst;
+    Token * matchedId;    
     int foundID = 0;    
     int peeked = PAR_Peek( par );
     
@@ -431,14 +436,14 @@ Ast * PAR_ExpandBlock( Parser * par )
     while( peeked == T_ID )
     {
         PAR_Match( par, T_ID );
-        //Keep ID
+        matchedId = par->lastMatched;
         
         peeked = PAR_Peek( par );
         
         if( peeked == T_COLON )
         {
             subAst = PAR_ExpandDeclVar( par );
-            //Add ID to subAst
+            AST_AddChildNode( subAst, A_ID, TOK_GetText( matchedId ) );
             AST_AddChildTree( ast, subAst );
             
             PAR_ExpandNewLine( par );
@@ -459,7 +464,7 @@ Ast * PAR_ExpandBlock( Parser * par )
     	if( peeked == T_EQ || peeked == T_OSBRACKET )
     	{
     	    subAst = PAR_ExpandCmdAssign( par );
-    	    //Add ID to subAst
+    	    AST_AddChildNode( subAst, A_ID, TOK_GetText( matchedId ) );
             AST_AddChildTree( ast, subAst );
             
     	    PAR_ExpandNewLine( par );
@@ -467,7 +472,7 @@ Ast * PAR_ExpandBlock( Parser * par )
     	else if( peeked == T_OCBRACKET )
     	{
     	    subAst = PAR_ExpandCall( par );
-    	    //Add ID to subAst
+    	    AST_AddChildNode( subAst, A_ID, TOK_GetText( matchedId ) );
             AST_AddChildTree( ast, subAst );
             
     	    PAR_ExpandNewLine( par );
@@ -481,14 +486,14 @@ Ast * PAR_ExpandBlock( Parser * par )
 		if( peeked == T_ID )
 	    {
 	    	PAR_Match( par, T_ID );
-	    	//Keep ID
+	    	matchedId = par->lastMatched;
 	            
 	        peeked = PAR_Peek( par );
 	           
 	        if( peeked == T_EQ || peeked == T_OSBRACKET )
 	        {
 	            subAst = PAR_ExpandCmdAssign( par );
-        	    //Add ID to subAst
+        	    AST_AddChildNode( subAst, A_ID, TOK_GetText( matchedId ) );
                 AST_AddChildTree( ast, subAst );
                 
         	    PAR_ExpandNewLine( par );
@@ -496,7 +501,7 @@ Ast * PAR_ExpandBlock( Parser * par )
 	        else if( peeked == T_OCBRACKET )
 	        {
 	            subAst = PAR_ExpandCall( par );
-        	    //Add ID to subAst
+        	    AST_AddChildNode( subAst, A_ID, TOK_GetText( matchedId ) );
                 AST_AddChildTree( ast, subAst );
                 
         	    PAR_ExpandNewLine( par );
@@ -517,13 +522,14 @@ Ast * PAR_ExpandBlock( Parser * par )
 
 Ast * PAR_ExpandFunction( Parser * par )
 {
-    printf("PAR: Function\n");
+    //printf("PAR: Function\n");
     Ast * ast = AST_New();
     AST_AddChildNode( ast, A_FUNCTION, NULL );
     
     PAR_Match( par, T_FUN );
     PAR_Match( par, T_ID );
-    //Add ID
+    AST_AddChildNode( ast, A_ID, TOK_GetText( par->lastMatched ) );
+    
     PAR_Match( par, T_OCBRACKET );
     
     if( PAR_Peek( par ) == T_ID )
@@ -549,7 +555,7 @@ Ast * PAR_ExpandFunction( Parser * par )
 
 Ast * PAR_ExpandDecl( Parser * par )
 {
-    printf("PAR: Decl\n");
+    //printf("PAR: Decl\n");
     Ast * ast = NULL;
     int peeked = PAR_Peek( par );
     
@@ -575,7 +581,7 @@ Ast * PAR_ExpandDecl( Parser * par )
 
 void PAR_ExpandProgram( Parser * par )
 {
-    printf("PAR: Program\n");
+    //printf("PAR: Program\n");
     Ast * ast = AST_New();
     AST_AddChildNode( ast, A_PROGRAM, NULL );
     
