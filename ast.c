@@ -62,61 +62,125 @@ char * ASN_ToString( int type )
     
     switch( type )
     {
-        case 0:
+        case A_PROGRAM:
             strcpy( str, "Program" );
             break;
         
-        case 1:
+        case A_TYPE:
             strcpy( str, "Type" );        
             break;
             
-        case 2:
+        case A_IF:
             strcpy( str, "If" );        
             break;
                         
-        case 3:
+        case A_WHILE:
             strcpy( str, "While" );        
             break;
             
-        case 4:
+        case A_DECLVAR:
             strcpy( str, "Declvar" );        
             break;
             
-        case 5:
+        case A_ASSIGN:
             strcpy( str, "Assign" );        
             break;
             
-        case 6:
+        case A_CALL:
             strcpy( str, "Call" );        
             break;
             
-        case 7:
+        case A_FUNCTION:
             strcpy( str, "Function" );        
             break;
             
-        case 8:
+        case A_RETURN:
             strcpy( str, "Return" );        
             break;
             
-        case 9:
+        case A_BLOCK:
             strcpy( str, "Block" );        
             break;
             
-        case 10:
+        case A_ID:
             strcpy( str, "ID" );        
             break;
             
-        case 11:
+        case A_VAR:
             strcpy( str, "Var" );        
             break;
             
-        case 12:
+        case A_ARGS:
             strcpy( str, "Args" );        
             break;
             
-        case 13:
-            strcpy( str, "Params" );        
-            break;               
+        case A_ADD:
+            strcpy( str, "+" );        
+            break;
+                    
+        case A_SUBTRACT:
+            strcpy( str, "-" );        
+            break;
+        
+        case A_DIVIDE:
+            strcpy( str, "/" );        
+            break;
+            
+        case A_MULTIPLY:
+            strcpy( str, "*" );        
+            break;
+            
+        case A_EQ:
+            strcpy( str, "=" );        
+            break;
+            
+        case A_NEQ:
+            strcpy( str, "<>" );        
+            break;
+            
+        case A_LARGER:
+            strcpy( str, ">" );        
+            break;
+            
+        case A_SMALLER:
+            strcpy( str, "<" );        
+            break;
+            
+        case A_LARGEREQ:
+            strcpy( str, ">=" );        
+            break;
+            
+        case A_SMALLEREQ:
+            strcpy( str, "<=" );        
+            break;
+            
+        case A_AND:
+            strcpy( str, "And" );        
+            break;
+            
+        case A_OR:
+            strcpy( str, "Or" );        
+            break;
+            
+        case A_NOT:
+            strcpy( str, "Not" );        
+            break;
+            
+        case A_NEGATIVE:
+            strcpy( str, "Negative" );        
+            break;
+            
+        case A_NEW:
+            strcpy( str, "New" );        
+            break; 
+            
+        case A_LITINT:
+            strcpy( str, "Integer" );        
+            break;
+            
+        case A_LITSTRING:
+            strcpy( str, "String" );        
+            break;                                      
                                                                                                                                                             
     }
     
@@ -169,7 +233,37 @@ void AST_Delete( Ast * ast )
 	free( ast );
 }
 
-void AST_AddChildTree( Ast * parent, Ast * child )
+void AST_PrependChildTree( Ast * parent, Ast * child )
+{
+    if( parent && child )
+    {
+        Node * childNode = child->root;
+        
+        if( parent->root && childNode )
+        {	
+	        Node * currChild = parent->root->child;
+		
+	        if( currChild )
+	        {
+		        currChild->prev = childNode;
+		        childNode->next = currChild;
+		        childNode->parent = currChild->parent;
+		        currChild->parent->child = childNode;		        
+	        }
+	        else
+	        {
+		        parent->root->child = childNode;
+		        childNode->parent = parent->root;
+	        }
+	    }
+	    else
+	    {
+	        parent->root = childNode;
+	    }
+	}
+}
+
+void AST_AppendChildTree( Ast * parent, Ast * child )
 {
     if( parent && child )
     {
@@ -201,7 +295,37 @@ void AST_AddChildTree( Ast * parent, Ast * child )
 	}
 }
 
-void AST_AddChildNode( Ast * parent, int type, char * text )
+void AST_PrependChildNode( Ast * parent, int type, char * text )
+{
+    if( parent )
+    {
+        Node * child = ASN_New( type, text );
+        
+        if( parent->root )
+        {	
+	        Node * currChild = parent->root->child;
+		
+	        if( currChild )
+	        {
+	            currChild->prev = child;
+	            child->next = currChild;
+	            child->parent = currChild->parent;
+	            currChild->parent->child = child;
+	        }
+	        else
+	        {
+		        parent->root->child = child;
+		        child->parent = parent->root;
+	        }
+	    }
+	    else
+	    {
+	        parent->root = child;
+	    }	
+	}
+}
+
+void AST_AppendChildNode( Ast * parent, int type, char * text )
 {
     if( parent )
     {
@@ -233,22 +357,66 @@ void AST_AddChildNode( Ast * parent, int type, char * text )
 	}
 }
 
+int AST_TokenTypeToAst( int tokenType )
+{
+    switch( tokenType )
+    {        
+        case T_LARGER:
+            return A_LARGER;
+            
+        case T_SMALLER:
+            return A_SMALLER;
+            
+        case T_LARGEREQ:
+            return A_LARGEREQ;
+            
+        case T_SMALLEREQ:
+            return A_SMALLEREQ;
+            
+        case T_EQ:
+            return A_EQ;
+            
+        case T_NEQ:
+            return A_NEQ;
+                    
+        case T_PLUS:
+            return A_ADD;
+            
+        case T_MINUS:
+            return A_SUBTRACT;
+            
+        case T_ASTERISK:
+            return A_MULTIPLY;
+            
+        case T_AND:
+            return A_AND;
+            
+        case T_OR:
+            return A_OR;
+            
+        case T_NOT:
+            return A_NOT;
+            
+        case T_LITINT:
+            return A_LITINT;
+            
+        case T_LITSTRING:
+            return A_LITSTRING;            
+        
+        case T_TRUE:
+            return A_TRUE;
+            
+        case T_FALSE:
+            return A_FALSE;
+                                         
+        default:
+            return -1;                              
+    }
+}
+
 void AST_Dump( Ast * ast )
 {
     printf("\n=======AST=======\n");
     ASN_Dump( ast->root, 1 );
 }
-
-
-
-
-
-
-
-
-
-
-
-
-
 
