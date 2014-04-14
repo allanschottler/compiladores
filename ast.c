@@ -180,7 +180,15 @@ char * ASN_ToString( int type )
             
         case A_LITSTRING:
             strcpy( str, "String" );        
-            break;                                      
+            break;  
+            
+        case A_TRUE:
+            strcpy( str, "True" );        
+            break;
+            
+        case A_FALSE:
+            strcpy( str, "False" );        
+            break;                                                
                                                                                                                                                             
     }
     
@@ -387,6 +395,9 @@ int AST_TokenTypeToAst( int tokenType )
             
         case T_ASTERISK:
             return A_MULTIPLY;
+            
+        case T_SLASH:
+            return A_DIVIDE;            
             
         case T_AND:
             return A_AND;

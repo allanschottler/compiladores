@@ -98,7 +98,7 @@ Ast * PAR_ExpandType( Parser * par )
     {
         PAR_Match( par, T_OSBRACKET );
         PAR_Match( par, T_CSBRACKET );
-        AST_AppendChildNode( ast, A_TYPE, "*" );        
+        AST_AppendChildNode( ast, A_TYPE, "[]" );        
     }
     
     AST_AppendChildTree( ast, PAR_ExpandBaseType( par ) );
@@ -415,7 +415,7 @@ Ast * PAR_ExpandCall( Parser * par )
     AST_AppendChildNode( ast, A_CALL, NULL );
     
     PAR_Match( par, T_OCBRACKET );    
-    PAR_ExpandExps( par );
+    AST_AppendChildTree( ast, PAR_ExpandExps( par ) );
     PAR_Match( par, T_CCBRACKET );
     
     return ast;
