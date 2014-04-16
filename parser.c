@@ -173,7 +173,7 @@ Ast * PAR_ExpandParams( Parser * par )
 
 Ast * PAR_ExpandExpB( Parser * par )
 {
-    printf("PAR: ExpB\n");
+    //printf("PAR: ExpB\n");
     Ast * ast = AST_New();    
     Token * matchedId;
     int peeked = PAR_Peek( par );
@@ -242,7 +242,7 @@ Ast * PAR_ExpandExpB( Parser * par )
 
 Ast * PAR_ExpandExpA( Parser * par )
 {
-    printf("PAR: ExpA\n");
+    //printf("PAR: ExpA\n");
     Ast * ast = AST_New();
     Ast * branch;
     int peeked;
@@ -264,7 +264,7 @@ Ast * PAR_ExpandExpA( Parser * par )
 
 Ast * PAR_ExpandExp( Parser * par )
 {
-    printf("PAR: Exp\n");
+    //printf("PAR: Exp\n");
     Ast * ast = AST_New();
     Ast * branch;
     Token * matchedId;
