@@ -2,7 +2,7 @@ myglobalvar :[][]int
 
 fun lol():int
 
-    if i=1    
+    if i=1+-2+3  
         
         i:int
         s:string
@@ -16,18 +16,22 @@ fun lol():int
         
     end
     
-    while (1+2)<>3
+    while a
     
         this:char
         
-        if (this=that(2, 2))and that<>2/5+(2--2)
+        if (this=that(2, 2))and that<>2/5--(2+2)
             that:int
-        else
+        else if y=2
             something()
+        else if x=2
+            that(-2)
+        else
+            nothing()
         end
     loop
     
-    return 1+(2)   
+    return 2
     
 end
 
@@ -42,11 +46,17 @@ fun main(argc:int, argv:[][]char)
         
     d1:[][][][]char
     
+    a=new[10]string
     lol()    
     
-    //c=true or false
+    c=true or false
     
-    a[2]= "a"
+    a[-1 +2]= "a"
     
     lol()
 end
+
+/*fun main()
+    
+
+end*/
