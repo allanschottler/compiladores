@@ -1,0 +1,16 @@
+global:string
+
+fun main() : int
+    
+    that:int
+    that = 1+2+3
+    this:int        // Declaracao depois de atribuicao
+    this = 0
+    
+    while this<>that
+    
+        this = random(1, that)
+    
+    loop
+
+end

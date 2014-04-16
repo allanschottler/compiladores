@@ -1,0 +1,15 @@
+fun main()
+
+    if algo()
+    
+    else if outro() + 1
+    
+    else aquele( outro() )  // Esquecer IF, "aquele( outro() )" vira bloco
+    
+    else if wtv()
+    
+    else
+    
+    end
+
+end
