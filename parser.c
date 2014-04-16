@@ -158,7 +158,7 @@ Ast * PAR_ExpandParams( Parser * par )
 {
     //printf("PAR: Params\n");    
     Ast * ast = AST_New();
-    AST_AppendChildNode( ast, A_ARGS, NULL, TOK_GetLine( par->lastMatched ) );
+    AST_AppendChildNode( ast, A_PARAMS, NULL, TOK_GetLine( par->lastMatched ) );
     
     AST_AppendChildTree( ast, PAR_ExpandParam( par ) );
         

@@ -145,6 +145,10 @@ char * ASN_ToString( int type )
             strcpy( str, "Args" );        
             break;
             
+        case A_PARAMS:
+            strcpy( str, "Params" );        
+            break;            
+            
         case A_ADD:
             strcpy( str, "+" );        
             break;
@@ -303,7 +307,7 @@ void AST_PrependChildTree( Ast * parent, Ast * child )
 	    }
 	}
 	
-	//free( child );
+	free( child );
 }
 
 void AST_AppendChildTree( Ast * parent, Ast * child )
@@ -337,69 +341,69 @@ void AST_AppendChildTree( Ast * parent, Ast * child )
 	    }
 	}
 	
-	//free( child );
+	free( child );
 }
 
 void AST_PrependChildNode( Ast * parent, int type, char * text, int line )
 {
-    if( parent )
+    if( !parent )
+        return;
+    
+    Node * child = ASN_New( type, text, line );
+    
+    if( parent->root )
+    {	
+        Node * currChild = parent->root->child;
+	
+        if( currChild )
+        {
+            currChild->prev = child;
+            child->next = currChild;
+            child->parent = currChild->parent;
+            currChild->parent->child = child;
+        }
+        else
+        {
+	        parent->root->child = child;
+	        child->parent = parent->root;
+        }
+    }
+    else
     {
-        Node * child = ASN_New( type, text, line );
-        
-        if( parent->root )
-        {	
-	        Node * currChild = parent->root->child;
-		
-	        if( currChild )
-	        {
-	            currChild->prev = child;
-	            child->next = currChild;
-	            child->parent = currChild->parent;
-	            currChild->parent->child = child;
-	        }
-	        else
-	        {
-		        parent->root->child = child;
-		        child->parent = parent->root;
-	        }
-	    }
-	    else
-	    {
-	        parent->root = child;
-	    }	
-	}
+        parent->root = child;
+    }	
 }
 
 void AST_AppendChildNode( Ast * parent, int type, char * text, int line )
 {
-    if( parent )
-    {
-        Node * child = ASN_New( type, text, line );
+    if( !parent )
+        return;
         
-        if( parent->root )
-        {	
-	        Node * currChild = parent->root->child;
-		
-	        if( currChild )
-	        {
-		        while( currChild->next )
-			        currChild = currChild->next;
-		
-		        currChild->next = child;
-		        child->prev = currChild;
-		        child->parent = currChild->parent;
-	        }
-	        else
-	        {
-		        parent->root->child = child;
-		        child->parent = parent->root;
-	        }
-	    }
-	    else
-	    {
-	        parent->root = child;
-	    }	
-	}
+    Node * child = ASN_New( type, text, line );
+        
+    if( parent->root )
+    {	
+        Node * currChild = parent->root->child;
+	
+        if( currChild )
+        {
+	        while( currChild->next )
+		        currChild = currChild->next;
+	
+	        currChild->next = child;
+	        child->prev = currChild;
+	        child->parent = currChild->parent;
+        }
+        else
+        {
+	        parent->root->child = child;
+	        child->parent = parent->root;
+        }
+    }
+    else
+    {
+        parent->root = child;
+    }
 }
 
 int AST_TokenTypeToAst( int tokenType )
@@ -464,6 +468,9 @@ int AST_TokenTypeToAst( int tokenType )
 
 void AST_Dump( Ast * ast )
 {
+    if( !ast )
+        return;
+        
     printf("\n=======AST=======\n");
     ASN_Dump( ast->root, 1 );
 }
