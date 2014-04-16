@@ -51,9 +51,9 @@ void AST_PrependChildTree( Ast * parent, Ast * child );
 
 void AST_AppendChildTree( Ast * parent, Ast * child );
 
-void AST_PrependChildNode( Ast * parent, int type, char * text );
+void AST_PrependChildNode( Ast * parent, int type, char * text, int line );
 
-void AST_AppendChildNode( Ast * parent, int type, char * text );
+void AST_AppendChildNode( Ast * parent, int type, char * text, int line );
 
 int AST_TokenTypeToAst( int tokenType );
 

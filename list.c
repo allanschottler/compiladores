@@ -84,17 +84,22 @@ void LIS_Advance( List * list )
     list->current = list->current->next;
 }
 
-void LIS_Match( List * list, int info, int (*pfuncCmp)( void *, int ), void (*pfuncError)( void *, int ) )
+void * LIS_Match( List * list, int info, int (*pfuncCmp)( void *, int ), void (*pfuncError)( void *, int ) )
 {
+    void * matched = NULL;
+    
 	if( list->current == NULL )
     	(*pfuncError)( NULL, info );
     	
     if( (*pfuncCmp)( list->current->info, info ) )
+    {
+        matched = list->current->info;
         LIS_Advance( list );
+    }
     else
         (*pfuncError)( list->current->info, info );
         
-    
+    return matched;
 }
 
 int LIS_Peek( List * list, int (*pfuncIntEval)( void * ) )

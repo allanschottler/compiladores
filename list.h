@@ -11,7 +11,7 @@ void LIS_Delete( List * list, void (*pfuncDelete)( void * ) );
 
 void LIS_PushBack( List * list, void * info );
 
-void LIS_Match( List * list, int info, int (*pfuncCmp)( void *, int ), void (*pfuncError)( void *, int ) );
+void * LIS_Match( List * list, int info, int (*pfuncCmp)( void *, int ), void (*pfuncError)( void *, int ) );
 
 int LIS_Peek( List * list, int (*pfuncIntEval)( void * ) );
 

@@ -13,16 +13,18 @@ struct node
 {
 	int type;
 	char * value;
+	int line;
 	Node * parent;
 	Node * next;
 	Node * prev;
 	Node * child;
 };
 
-Node * ASN_New( int type, char * value )
+Node * ASN_New( int type, char * value, int line )
 {
 	Node * node = ( Node* )malloc( sizeof( Node ) );
 	node->type = type;
+	node->line = line;
 	node->value = NULL;
 	
 	if( value )	
@@ -227,7 +229,7 @@ char * ASN_ToString( int type )
 void ASN_Dump( Node * node, int depth )
 {
     char * str = ASN_ToString( node->type );
-    printf("VALUE: %s TYPE: %s\n", node->value, str );
+    printf("%s %s @%d\n", str, node->value, node->line );
     free( str );
     
     Node * currChild = node->child;
@@ -338,11 +340,11 @@ void AST_AppendChildTree( Ast * parent, Ast * child )
 	//free( child );
 }
 
-void AST_PrependChildNode( Ast * parent, int type, char * text )
+void AST_PrependChildNode( Ast * parent, int type, char * text, int line )
 {
     if( parent )
     {
-        Node * child = ASN_New( type, text );
+        Node * child = ASN_New( type, text, line );
         
         if( parent->root )
         {	
@@ -368,11 +370,11 @@ void AST_PrependChildNode( Ast * parent, int type, char * text )
 	}
 }
 
-void AST_AppendChildNode( Ast * parent, int type, char * text )
+void AST_AppendChildNode( Ast * parent, int type, char * text, int line )
 {
     if( parent )
     {
-        Node * child = ASN_New( type, text );
+        Node * child = ASN_New( type, text, line );
         
         if( parent->root )
         {	
