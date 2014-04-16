@@ -38,22 +38,51 @@ Node * ASN_New( int type, char * value )
 
 void ASN_Delete( Node * node )
 {
-	/*int isFirstChild = ( node->prev == NULL );
-	Node * currChild = node->child;
+    if( node )
+    {
+	    Node * next = node->child;
+	    Node * toDelete;
 	
-	if( currChild )
-	{
-	    while( currChild->next )
-		    currChild = currChild->next;
-		    
-		while( currChild->prev )
-		{
-		    Node * toDelete = currChild;
-		    currChild = currChild->prev;
-		    
-		    NOD_Delete( toDelete );
-		}
-	}*/
+	    while( next )
+	    {
+	        toDelete = next;
+	        next = next->next;
+	        ASN_Delete( toDelete );
+	    }	
+        
+        if( node->next )
+        {
+            if( node->prev )
+            {
+                node->next->prev = node->prev;
+                node->prev->next = node->next;
+            }
+            else
+            {
+                node->next->prev = NULL;
+                
+                if( node->parent )
+                    node->parent->child = node->next;
+            }
+        }
+        else
+        {
+            if( node->prev )
+            {
+                node->prev->next = NULL;            
+            }
+            else
+            {  
+                if( node->parent )          
+                    node->parent->child = NULL;
+            }
+        }
+		
+	    if( node->value )
+	        free( node->value );
+	        
+	    free( node );
+	}
 }
 
 char * ASN_ToString( int type )
@@ -222,8 +251,7 @@ void ASN_Dump( Node * node, int depth )
 struct ast
 {
 	Node * root;
-	Node * current;
-	List * tokens;
+	Node * current;	
 };
 
 Ast * AST_New()
@@ -237,8 +265,11 @@ Ast * AST_New()
 
 void AST_Delete( Ast * ast )
 {
-	ASN_Delete( ast->root );
-	free( ast );
+    if( ast )
+    {
+	    ASN_Delete( ast->root );	
+    	free( ast );    	
+    }
 }
 
 void AST_PrependChildTree( Ast * parent, Ast * child )
@@ -269,6 +300,8 @@ void AST_PrependChildTree( Ast * parent, Ast * child )
 	        parent->root = childNode;
 	    }
 	}
+	
+	//free( child );
 }
 
 void AST_AppendChildTree( Ast * parent, Ast * child )
@@ -301,6 +334,8 @@ void AST_AppendChildTree( Ast * parent, Ast * child )
 	        parent->root = childNode;
 	    }
 	}
+	
+	//free( child );
 }
 
 void AST_PrependChildNode( Ast * parent, int type, char * text )
