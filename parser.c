@@ -230,7 +230,7 @@ Ast * PAR_ExpandExpB( Parser * par )
     {
         PAR_Match( par, T_MINUS );
         AST_AppendChildNode( ast, A_NEGATIVE, NULL, TOK_GetLine( par->lastMatched ) );
-        AST_AppendChildTree( ast, PAR_ExpandExp( par ) );
+        AST_AppendChildTree( ast, PAR_ExpandExpB( par ) );
     }
     else
     {
