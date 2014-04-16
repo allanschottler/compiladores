@@ -44,6 +44,7 @@ Lexer * LEX_New()
     lex->buffer = malloc( lex->bufSize );
     lex->buffer[0] = '\0';
     lex->line = 1;
+    lex->peeked = false;
     return lex;
 }
 

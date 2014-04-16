@@ -244,7 +244,7 @@ Ast * PAR_ExpandExpA( Parser * par )
 {
     printf("PAR: ExpA\n");
     Ast * ast = AST_New();
-    Ast * branch = AST_New();
+    Ast * branch;
     int peeked;
     
     branch = PAR_ExpandExpB( par );    
@@ -266,7 +266,7 @@ Ast * PAR_ExpandExp( Parser * par )
 {
     printf("PAR: Exp\n");
     Ast * ast = AST_New();
-    Ast * branch = AST_New();
+    Ast * branch;
     Token * matchedId;
     int foundFirstTerminal = 0;
     int peeked;
