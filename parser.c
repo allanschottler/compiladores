@@ -171,9 +171,8 @@ Ast * PAR_ExpandParams( Parser * par )
     return ast;
 }
 
-Ast * PAR_ExpandExpB( Parser * par )
+Ast * PAR_ExpandExpTerminal( Parser * par )
 {
-    //printf("PAR: ExpB\n");
     Ast * ast = AST_New();    
     Token * matchedId;
     int peeked = PAR_Peek( par );
@@ -219,19 +218,7 @@ Ast * PAR_ExpandExpB( Parser * par )
         PAR_Match( par, T_OCBRACKET );
         AST_AppendChildTree( ast, PAR_ExpandExp( par ) );
         PAR_Match( par, T_CCBRACKET );                        
-    }
-    else if( peeked == T_NOT )
-    {
-        PAR_Match( par, T_NOT );
-        AST_AppendChildNode( ast, A_NOT, NULL, TOK_GetLine( par->lastMatched ) );
-        AST_AppendChildTree( ast, PAR_ExpandExp( par ) );
-    }
-    else if( peeked == T_MINUS )
-    {
-        PAR_Match( par, T_MINUS );
-        AST_AppendChildNode( ast, A_NEGATIVE, NULL, TOK_GetLine( par->lastMatched ) );
-        AST_AppendChildTree( ast, PAR_ExpandExpB( par ) );
-    }
+    }   
     else
     {
     	PAR_Error( par, "expression", "Missing expression?" );
@@ -240,51 +227,148 @@ Ast * PAR_ExpandExpB( Parser * par )
     return ast;
 }
 
-Ast * PAR_ExpandExpA( Parser * par )
+Ast * PAR_ExpandExpUnary( Parser * par )
 {
-    //printf("PAR: ExpA\n");
+    Ast * ast = AST_New();    
+    int peeked;    
+    
+    peeked = PAR_Peek( par );
+    
+    if( peeked == T_NOT  )
+    {
+        PAR_Match( par, peeked );
+        AST_AppendChildNode( ast, A_NOT, NULL, TOK_GetLine( par->lastMatched ) );        
+            
+        AST_AppendChildTree( ast, PAR_ExpandExpUnary( par ) );
+    }
+    else if( peeked == T_MINUS )
+    {
+        PAR_Match( par, peeked );
+        AST_AppendChildNode( ast, A_NEGATIVE, NULL, TOK_GetLine( par->lastMatched ) );        
+            
+        AST_AppendChildTree( ast, PAR_ExpandExpUnary( par ) );
+    }
+    else
+    {
+        AST_AppendChildTree( ast, PAR_ExpandExpTerminal( par ) );
+    }
+    
+    return ast;
+}
+
+Ast * PAR_ExpandExpB( Parser * par )
+{
     Ast * ast = AST_New();
     Ast * branch;
     int peeked;
     
-    branch = PAR_ExpandExpB( par );    
+    branch = PAR_ExpandExpUnary( par );
     peeked = PAR_Peek( par );
     
     if( peeked == T_ASTERISK || peeked == T_SLASH )
     {
         PAR_Match( par, peeked );
-        AST_AppendChildNode( ast, AST_TokenTypeToAst( peeked ), NULL, TOK_GetLine( par->lastMatched ) );
+        AST_AppendChildNode( ast, AST_TokenTypeToAst( peeked ), NULL, TOK_GetLine( par->lastMatched ) );        
+            
+        AST_AppendChildTree( ast, PAR_ExpandExpB( par ) );
+    }
+    
+    AST_PrependChildTree( ast, branch );
+    
+    return ast;
+}
+
+Ast * PAR_ExpandExpA( Parser * par )
+{
+    Ast * ast = AST_New();
+    Ast * branch;
+    int peeked;
+    
+    branch = PAR_ExpandExpB( par );
+    peeked = PAR_Peek( par );
+    
+    if( peeked == T_PLUS || peeked == T_MINUS )
+    {
+        PAR_Match( par, peeked );
+        AST_AppendChildNode( ast, AST_TokenTypeToAst( peeked ), NULL, TOK_GetLine( par->lastMatched ) );        
+            
         AST_AppendChildTree( ast, PAR_ExpandExpA( par ) );
     }
     
-    AST_AppendChildTree( ast, branch );
+    AST_PrependChildTree( ast, branch );
+    
+    return ast;
+}
+
+Ast * PAR_ExpandExpCmp( Parser * par )
+{
+    Ast * ast = AST_New();
+    Ast * branch;
+    int peeked;
+    
+    branch = PAR_ExpandExpA( par );
+    peeked = PAR_Peek( par );
+    
+    if( peeked == T_EQ || peeked == T_NEQ || peeked == T_LARGER || peeked == T_LARGEREQ || peeked == T_SMALLER || peeked == T_SMALLEREQ )
+    {
+        PAR_Match( par, peeked );
+        AST_AppendChildNode( ast, AST_TokenTypeToAst( peeked ), NULL, TOK_GetLine( par->lastMatched ) );        
+            
+        AST_AppendChildTree( ast, PAR_ExpandExpCmp( par ) );
+    }
+    
+    AST_PrependChildTree( ast, branch );
+    
+    return ast;
+}
+
+Ast * PAR_ExpandExpAnd( Parser * par )
+{
+    Ast * ast = AST_New();
+    Ast * branch;
+    int peeked;
+    
+    branch = PAR_ExpandExpCmp( par );
+    peeked = PAR_Peek( par );
+    
+    if( peeked == T_AND )
+    {
+        PAR_Match( par, peeked );
+        AST_AppendChildNode( ast, AST_TokenTypeToAst( peeked ), NULL, TOK_GetLine( par->lastMatched ) );        
+            
+        AST_AppendChildTree( ast, PAR_ExpandExpAnd( par ) );
+    }
+    
+    AST_PrependChildTree( ast, branch );
+    
+    return ast;
+}
+
+Ast * PAR_ExpandExpOr( Parser * par )
+{
+    Ast * ast = AST_New();
+    Ast * branch;
+    int peeked;
+    
+    branch = PAR_ExpandExpAnd( par );
+    peeked = PAR_Peek( par );
+    
+    if( peeked == T_OR )
+    {
+        PAR_Match( par, peeked );
+        AST_AppendChildNode( ast, AST_TokenTypeToAst( peeked ), NULL, TOK_GetLine( par->lastMatched ) );        
+            
+        AST_AppendChildTree( ast, PAR_ExpandExpOr( par ) );
+    }
+    
+    AST_PrependChildTree( ast, branch );
     
     return ast;
 }
 
 Ast * PAR_ExpandExp( Parser * par )
 {
-    //printf("PAR: Exp\n");
-    Ast * ast = AST_New();
-    Ast * branch;
-    Token * matchedId;
-    int foundFirstTerminal = 0;
-    int peeked;
-                   
-    branch = PAR_ExpandExpA( par );
-    peeked = PAR_Peek( par );    
-    
-    if( peeked == T_PLUS || peeked == T_MINUS || peeked == T_EQ || peeked == T_NEQ || peeked == T_LARGER || peeked == T_LARGEREQ || peeked == T_SMALLER || peeked == T_SMALLEREQ || peeked == T_AND || peeked == T_OR )
-    {
-        PAR_Match( par, peeked );
-        AST_AppendChildNode( ast, AST_TokenTypeToAst( peeked ), NULL, TOK_GetLine( par->lastMatched ) );        
-            
-        AST_AppendChildTree( ast, PAR_ExpandExp( par ) );
-    }
-    
-    AST_PrependChildTree( ast, branch );
-    
-    return ast;
+    return PAR_ExpandExpOr( par );
 }
 
 Ast * PAR_ExpandExps( Parser * par )
