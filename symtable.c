@@ -1,5 +1,6 @@
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include "symtable.h"
 #include "uthash.h"
@@ -49,12 +50,19 @@ void SCO_Delete( Scope * scope )
 		return;
 		
 	int i;
+	Hash *h, *tmp;
 	
 	for( i = 0; i < scope->nScopes; i++ )
 	{
 		SCO_Delete( scope->scopes[i] );
 	}
 	
+	HASH_ITER( hh, scope->symbols, h, tmp ) 
+	{
+        HASH_DEL( scope->symbols, h );
+        free( h );
+    }
+    
 	free( scope->scopes );
 	free( scope );
 }
@@ -101,16 +109,6 @@ void SYT_Delete( SymTable * syt )
 	SCO_Delete( syt->root );
 }
 
-void SYT_Build( SymTable * syt, Ast * ast )
-{
-	syt->ast = ast;
-}
-
-void SYT_ProcessNode( SymTable * syt )
-{
-
-}
-
 void SYT_OpenScope( SymTable * syt )
 {
 	Scope * newScope = SCO_New();
@@ -127,19 +125,60 @@ void SYT_CloseScope( SymTable * syt )
 	syt->current = syt->current->parent;
 }
 
-int SYT_CheckSymbol( SymTable * syt, const char * id )
+int SYT_CheckSymbol( SymTable * syt, const char * idName )
 {
-	//std::map<char *, int>::iterator it = syt->current->symbols.find( id );
-	
-	//return ( *it == syt->current->symbols.begin() ? S_NONE : *it );
-	HASH_FIND_
+	Hash * h;
+
+    HASH_FIND_STR( syt->current->symbols, idName, h );
+    return ( h ? h->type : S_NONE );
 }
  
-void SYT_AddSymbol( SymTable * syt, char * id, int type )
+int SYT_AddSymbol( SymTable * syt, char * idName, int type )
 {
-	struct hash * h = malloc( sizeof( struct hash ) );
-	strcpy( h->id, id );
-	h->type = type;
+    Hash * h;
+    HASH_FIND_STR( syt->current->symbols, idName, h );
+    
+    if( h == NULL ) 
+    {
+	    h = ( Hash* )malloc( sizeof( Hash ) );
+	    h->id = ( char* )malloc( strlen( idName ) * sizeof( char ) );
+	    strcpy( h->id, idName );
+	    h->type = type;
 	
-	HASH_ADD_STR( hash, id, h );
+	    HASH_ADD_STR( syt->current->symbols, id, h );
+	    return 1;
+	}
+	
+	return 0;
 }
+
+void SYT_Build( SymTable * syt, Ast * ast )
+{
+	syt->ast = ast;
+	
+	printf("open\n");
+	SYT_OpenScope( syt );
+	
+		printf("add\n");
+	if( SYT_AddSymbol( syt, "x", S_INT ) )
+	{
+	    printf("check\n");
+	    printf("Added? %d\n", SYT_CheckSymbol( syt, "x" ) );
+	}
+	
+	if( SYT_AddSymbol( syt, "y", S_BOOL ) )
+	{
+	    printf("check2\n");
+	    printf("Added? %d\n", SYT_CheckSymbol( syt, "y" ) );
+	}
+
+	printf("close\n");	
+	SYT_CloseScope( syt );	
+}
+
+void SYT_ProcessNode( SymTable * syt )
+{
+
+}
+
+

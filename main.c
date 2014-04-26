@@ -4,6 +4,7 @@
 #include "lexer.h"
 #include "parser.h"
 #include "ast.h"
+#include "symtable.h"
 
 
 void errorLexer( Token * tok )
@@ -55,6 +56,9 @@ int main( int argc, char * argv[] )
     PAR_Execute( par );    
     
     PAR_Delete( par );
+    
+    SymTable * syt = SYT_New();
+    SYT_Build( syt, NULL );
    
 	return 0;
 }
