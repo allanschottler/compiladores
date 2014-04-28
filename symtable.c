@@ -219,18 +219,16 @@ void SYT_ProcessNode( SymTable * syt, Ast * ast )
 
 void SYT_Build( SymTable * syt, Ast * ast )
 {
-	syt->ast = ast;
-	
-	Ast ** children;
-	int nChildren = AST_GetChildrenArray( ast, &children );
-	int i;
+	syt->ast = ast;	
 	
 	// Global scope
 	SYT_OpenScope( syt );
 	
-	for( i = 0; i < nChildren; i++ )
+	Ast * child;
+	
+	for( child = AST_GetChild( ast ); child; child = AST_NextSibling( child ) )
 	{
-	    switch( AST_GetType( children[i] ) )
+	    switch( AST_GetType( child ) )
 	    {
 	        case A_FUNCTION:
 	            {

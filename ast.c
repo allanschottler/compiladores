@@ -476,7 +476,7 @@ void AST_Dump( Ast * ast )
 }
 
 // I hate everything about this function, but it's saturday night
-int AST_GetChildrenArray( Ast * ast, Ast *** outChildren )
+/*int AST_GetChildrenArray( Ast * ast, Ast *** outChildren )
 {
     if( !ast )
         return 0;
@@ -524,7 +524,7 @@ void AST_FreeChildrenArray( Ast ** children, int nChildren )
     }   
     
     free( children );
-}
+}*/
 
 int AST_GetType( Ast * ast )
 {
@@ -544,7 +544,43 @@ int AST_GetLine( Ast * ast )
     return ast->root->line;
 }
 
-char * AST_FindId( Ast ** array, int n )
+Ast * AST_GetChild( Ast * ast )
+{
+	if( !ast )
+		return NULL;
+		
+	if( !ast->root )
+		return NULL;
+	
+	if( !ast->root->child )
+		return NULL;
+		
+	Ast * child = AST_New();
+	child->root = ast->root->child;
+		
+	return child;
+}
+
+Ast * AST_NextSibling( Ast * ast )
+{
+	if( !ast )
+		return NULL;
+		
+	if( !ast->root )
+		return NULL;
+		
+	if( !ast->root->next )
+		return NULL;
+		
+	Ast * sibling = AST_New();
+	sibling->root = ast->root->next;
+	
+	free( ast );
+	
+	return sibling;
+}
+
+/*char * AST_FindId( Ast ** array, int n )
 {
     int i;
     
@@ -575,5 +611,5 @@ char * AST_FindType( Ast ** array, int n )
     }
     
     return NULL;
-}
+}*/
 

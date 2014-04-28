@@ -73,9 +73,9 @@ int AST_TokenTypeToAst( int tokenType );
 
 void AST_Dump( Ast * ast );
 
-int AST_GetChildrenArray( Ast * ast, Ast *** children );
+/*int AST_GetChildrenArray( Ast * ast, Ast *** children );
 
-void AST_FreeChildrenArray( Ast ** children, int nChildren );
+void AST_FreeChildrenArray( Ast ** children, int nChildren );*/
 
 int AST_GetType( Ast * ast );
 
@@ -83,8 +83,12 @@ char * AST_GetValue( Ast * ast );
 
 int AST_GetLine( Ast * ast );
 
-char * AST_FindId( Ast ** array, int n );
+Ast * AST_GetChild( Ast * ast );
 
-char * AST_FindType( Ast ** array, int n );
+Ast * AST_NextSibling( Ast * ast );
+
+/*char * AST_FindId( Ast ** array, int n );
+
+char * AST_FindType( Ast ** array, int n );*/
 
 #endif
