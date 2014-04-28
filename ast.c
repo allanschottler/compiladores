@@ -471,7 +471,109 @@ void AST_Dump( Ast * ast )
     if( !ast )
         return;
         
-    printf("\n=======AST=======\n");
+    printf( "\n=======AST=======\n" );
     ASN_Dump( ast->root, 1 );
+}
+
+// I hate everything about this function, but it's saturday night
+int AST_GetChildrenArray( Ast * ast, Ast *** outChildren )
+{
+    if( !ast )
+        return 0;
+    
+    if( !ast->root )
+        return 0;
+            
+    Node * currNode = ast->root->child;
+    
+    if( !currNode )
+        return 0;
+        
+    int count = 1;
+    
+    while( currNode->next )
+    {
+        count++;
+        currNode = currNode->next;
+    }
+    
+    *outChildren = ( Ast** )malloc( count * sizeof( Ast* ) );
+    currNode = ast->root->child;
+
+    int i = 0;
+    
+    do    
+    {
+        Ast * child = AST_New();        
+        child->root = currNode;
+        ( *outChildren )[i++] = child;
+        currNode = currNode->next;        
+    }
+    while( currNode );
+    
+    return count;
+}
+
+void AST_FreeChildrenArray( Ast ** children, int nChildren )
+{
+    int i;
+    
+    for( i = 0; i < nChildren; i++ )
+    {
+        free( children[i] );
+    }   
+    
+    free( children );
+}
+
+int AST_GetType( Ast * ast )
+{
+    return ast->root->type;
+}
+
+char * AST_GetValue( Ast * ast )
+{
+    if( ast->root->value )
+        return strdup( ast->root->value );
+        
+    return NULL;
+}
+
+int AST_GetLine( Ast * ast )
+{
+    return ast->root->line;
+}
+
+char * AST_FindId( Ast ** array, int n )
+{
+    int i;
+    
+    for( i = 0; i < n; i++ )
+    {
+        if( AST_GetType( array[i] ) == A_ID )
+            return AST_GetValue( array[i] );
+    }
+    
+    return NULL;
+}
+
+char * AST_FindType( Ast ** array, int n )
+{
+    int i;
+    
+    for( i = 0; i < n; i++ )
+    {
+        if( AST_GetType( array[i] ) == A_TYPE )
+        {
+            Ast ** children;
+            int nChildren = AST_GetChildrenArray( array[i], &children );
+            char * value = AST_GetValue( children[nChildren - 1] );
+            
+            AST_FreeChildrenArray( children, nChildren );
+            return value;
+        }
+    }
+    
+    return NULL;
 }
 

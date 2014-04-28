@@ -7,6 +7,35 @@
 
 #define SCOPE_SIZE 4
 
+#define ERROR_UNDECLARED    0
+#define ERROR_REDEFINED     1
+#define ERROR_UNKNOWN       2
+
+static void errorSymTable( int error, char * name, int line )
+{
+    switch( error )
+    {
+        case ERROR_UNDECLARED:
+            fprintf( stderr, "!Typing Error [line %d]: Undeclared identifier \'%s\'.\n", line, name );
+            break;
+            
+        case ERROR_REDEFINED:
+            fprintf( stderr, "!Typing Error [line %d]: Redefinition of identifier \'%s\'.\n", line, name );
+            break;
+            
+        case ERROR_UNKNOWN:
+            fprintf( stderr, "!Typing Error: Internal error.\n" );
+            break;
+            
+        default:
+            break;
+    }
+    
+    free( name );
+    
+    exit( EXIT_FAILURE );
+}
+
 typedef struct hash Hash;
 
 struct hash
@@ -128,13 +157,20 @@ void SYT_CloseScope( SymTable * syt )
 int SYT_CheckSymbol( SymTable * syt, const char * idName )
 {
 	Hash * h;
-
+    
+    //Check parent scopes
     HASH_FIND_STR( syt->current->symbols, idName, h );
     return ( h ? h->type : S_NONE );
 }
  
 int SYT_AddSymbol( SymTable * syt, char * idName, int type )
 {
+    if( !idName )
+        return 0;
+        
+    if( type == S_NONE )
+        return 0;
+        
     Hash * h;
     HASH_FIND_STR( syt->current->symbols, idName, h );
     
@@ -145,40 +181,91 @@ int SYT_AddSymbol( SymTable * syt, char * idName, int type )
 	    strcpy( h->id, idName );
 	    h->type = type;
 	
-	    HASH_ADD_STR( syt->current->symbols, id, h );
+	    HASH_ADD_STR( syt->current->symbols, id, h ); //This works cuz macros
 	    return 1;
 	}
 	
 	return 0;
 }
 
+void SYT_VisitFunction( SymTable * syt, Ast * ast )
+{
+
+}
+
+void SYT_VisitDeclaration( SymTable * syt, Ast * ast )
+{
+
+}
+
+void SYT_VisitAssign( SymTable * syt, Ast * ast )
+{
+
+}
+
+void SYT_VisitCall( SymTable * syt, Ast * ast )
+{
+
+}
+
+void SYT_ProcessNode( SymTable * syt, Ast * ast )
+{
+    switch( AST_GetType( ast ) )
+    {
+        case A_FUNCTION:
+            SYT_VisitFunction( syt, ast );
+    }
+}
+
 void SYT_Build( SymTable * syt, Ast * ast )
 {
 	syt->ast = ast;
 	
-	printf("open\n");
+	Ast ** children;
+	int nChildren = AST_GetChildrenArray( ast, &children );
+	int i;
+	
+	// Global scope
 	SYT_OpenScope( syt );
 	
-		printf("add\n");
-	if( SYT_AddSymbol( syt, "x", S_INT ) )
+	for( i = 0; i < nChildren; i++ )
 	{
-	    printf("check\n");
-	    printf("Added? %d\n", SYT_CheckSymbol( syt, "x" ) );
+	    switch( AST_GetType( children[i] ) )
+	    {
+	        case A_FUNCTION:
+	            {
+	                Ast ** funcChildren;
+	                int nFChildren = AST_GetChildrenArray( children[i], &funcChildren );                
+	                char * name = AST_FindId( funcChildren, nFChildren );
+	                char * strType = AST_FindType( funcChildren, nFChildren );
+	                int type = S_NONE;
+	                
+	                if( strcmp( strType, "char" ) == 0 )
+	                    type = S_CHAR;
+	                else if( strcmp( strType, "int" ) == 0 )
+	                    type = S_INT;
+	                else if( strcmp( strType, "bool" ) == 0 )
+	                    type = S_BOOL;
+	                else if( strcmp( strType, "string" ) == 0 )
+	                    type = S_STRING;
+	                    
+	                if( !SYT_AddSymbol( syt, name, type ) )
+	                {
+	                    errorSymTable( ERROR_REDEFINED, name, AST_GetLine( children[i] ) );
+	                }
+	            }
+	            
+	            break;
+	            
+	        case A_DECLVAR:
+	            break;
+	            
+            default:
+	            errorSymTable( ERROR_UNKNOWN, NULL, 0 );
+	    }
 	}
-	
-	if( SYT_AddSymbol( syt, "y", S_BOOL ) )
-	{
-	    printf("check2\n");
-	    printf("Added? %d\n", SYT_CheckSymbol( syt, "y" ) );
-	}
-
-	printf("close\n");	
-	SYT_CloseScope( syt );	
+		
+    //SYT_ProcessNode( syt, ast );
+    SYT_CloseScope( syt );
 }
-
-void SYT_ProcessNode( SymTable * syt )
-{
-
-}
-
 

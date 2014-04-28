@@ -2,7 +2,6 @@
 #include <stdlib.h>
 
 #include "parser.h"
-#include "ast.h"
 
 
 Ast * PAR_ExpandBlock( Parser * par );
@@ -721,10 +720,10 @@ void PAR_ExpandProgram( Parser * par )
 
 /********************************************************************/
 
-Parser * PAR_New( List * tokens )
+Parser * PAR_New()
 {
     Parser * par = ( Parser* )malloc( sizeof( Parser ) );
-    par->tokens = tokens;
+    par->tokens = NULL;
     par->ast = AST_New();
     par->lastMatched = NULL;
     
@@ -743,8 +742,10 @@ void PAR_Delete( Parser * par )
     }
 }
 
-void PAR_Execute( Parser * par )
+void PAR_Execute( Parser * par, List * tokens )
 {
+    par->tokens = tokens;
+    
     if( LIS_GetSize( par->tokens ) )
         PAR_ExpandProgram( par );
         
@@ -754,4 +755,9 @@ void PAR_Execute( Parser * par )
 void PAR_DumpTokens( Parser * par )
 {
     LIS_Dump( par->tokens, &TOK_Dump );
+}
+
+Ast * PAR_GetAst( Parser * par )
+{
+    return par->ast;
 }

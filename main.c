@@ -19,7 +19,7 @@ int main( int argc, char * argv[] )
 	if( argc < 2 )
 	{
 	    printf( "Not enough arguments.\n" );
-		return;
+		return EXIT_FAILURE;
 	}
 		
 	Lexer * lex = LEX_New();
@@ -52,13 +52,13 @@ int main( int argc, char * argv[] )
     
     LEX_Delete( lex );
     
-    Parser * par = PAR_New( tokens );    
-    PAR_Execute( par );    
+    Parser * par = PAR_New();    
+    PAR_Execute( par, tokens );
+    
+    SymTable * syt = SYT_New();
+    SYT_Build( syt, PAR_GetAst( par ) );
     
     PAR_Delete( par );
     
-    SymTable * syt = SYT_New();
-    SYT_Build( syt, NULL );
-   
-	return 0;
+	return EXIT_SUCCESS;
 }
