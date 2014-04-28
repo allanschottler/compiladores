@@ -55,11 +55,13 @@ int main( int argc, char * argv[] )
     Parser * par = PAR_New();    
     PAR_Execute( par, tokens );
     
+    Ast * ast = PAR_GetAst( par );
     SymTable * syt = SYT_New();
-    SYT_Build( syt, PAR_GetAst( par ) );
+    SYT_Build( syt, ast );
     
-    PAR_Delete( par );
     SYT_Delete( syt );
+    PAR_Delete( par );    
+    AST_Delete( ast );
     
 	return EXIT_SUCCESS;
 }

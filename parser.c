@@ -734,10 +734,7 @@ void PAR_Delete( Parser * par )
 {
     if( par )
     {
-        LIS_Delete( par->tokens, &TOK_Delete );
-        AST_Delete( par->ast );
-        par->ast = NULL;  
-        
+        LIS_Delete( par->tokens, &TOK_Delete );        
         free( par );      
     }
 }

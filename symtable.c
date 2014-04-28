@@ -5,7 +5,7 @@
 #include "symtable.h"
 #include "uthash.h"
 
-#define SCOPE_SIZE 4
+#define MAX_SCOPE_SIZE 4
 
 #define ERROR_UNDECLARED    0
 #define ERROR_REDEFINED     1
@@ -60,14 +60,14 @@ Scope * SCO_New()
 {
 	Scope * scope = ( Scope* )malloc( sizeof( Scope ) );
 	scope->parent = NULL;
-	scope->scopes = ( Scope** )malloc( SCOPE_SIZE * sizeof( Scope* ) );
+	scope->scopes = ( Scope** )malloc( MAX_SCOPE_SIZE * sizeof( Scope* ) );
 	scope->nScopes = 0;
-	scope->maxScopes = SCOPE_SIZE;
+	scope->maxScopes = MAX_SCOPE_SIZE;
 	scope->symbols = NULL;
 	
 	int i;
 	
-	for( i = 0; i < SCOPE_SIZE; i++ )
+	for( i = 0; i < MAX_SCOPE_SIZE; i++ )
 		scope->scopes[i] = NULL;
 	
 	return scope;
@@ -85,21 +85,25 @@ void SCO_Delete( Scope * scope )
 	{
 		SCO_Delete( scope->scopes[i] );		
 	}
+
+	free( scope->scopes );
 	
 	HASH_ITER( hh, scope->symbols, h, tmp ) 
 	{
         HASH_DEL( scope->symbols, h );
         free( h );
-    }
-    
-	free( scope->scopes );
+    }    
+	
 	free( scope );
 }
 
 void SCO_AppendScope( Scope * parent, Scope * child )
 {
 	if( !parent )
+	{
+	    free( child );
 		return;
+	}
 		
 	if( !child )
 		return;
@@ -109,7 +113,7 @@ void SCO_AppendScope( Scope * parent, Scope * child )
 	if( parent->nScopes == parent->maxScopes )
 	{
 		parent->maxScopes *= 2;
-		parent->scopes = realloc( parent->scopes, parent->maxScopes );
+		parent->scopes = realloc( parent->scopes, parent->maxScopes * sizeof( Scope* ) );
 	}
 	
 	parent->scopes[parent->nScopes++] = child;
@@ -194,6 +198,14 @@ int SYT_AddSymbol( SymTable * syt, char * idName, int type )
 	return 0;
 }
 
+void SYT_VisitID( SymTable * syt, Ast * ast )
+{
+    char * name = AST_GetValue( ast );
+    
+    if( !SYT_CheckSymbol( syt, name ) )	                
+        errorSymTable( ERROR_UNDECLARED, name, AST_GetLine( ast ) );
+}
+
 void SYT_VisitDeclaration( SymTable * syt, Ast * ast )
 {
     char * name = AST_FindId( ast );	                
@@ -249,6 +261,8 @@ void SYT_VisitFunction( SymTable * syt, Ast * ast )
                 break;                
         }
     }
+    
+    SYT_CloseScope( syt );
 }
 
 void SYT_ProcessNode( SymTable * syt, Ast * ast )
@@ -257,6 +271,10 @@ void SYT_ProcessNode( SymTable * syt, Ast * ast )
     {
         case A_BLOCK:
             SYT_OpenScope( syt );
+            break;
+            
+        case A_ID:
+            SYT_VisitID( syt, ast );
             break;
             
         case A_FUNCTION:
