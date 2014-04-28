@@ -115,6 +115,8 @@ void SCO_AppendScope( Scope * parent, Scope * child )
 	parent->scopes[parent->nScopes++] = child;
 }
 
+void SYT_ProcessNode( SymTable * syt, Ast * ast );
+
 struct symtable
 {
 	Ast * ast;
@@ -158,28 +160,30 @@ void SYT_CloseScope( SymTable * syt )
 int SYT_CheckSymbol( SymTable * syt, const char * idName )
 {
 	Hash * h;
+	Scope * current = syt->current;
     
-    //Check parent scopes
-    HASH_FIND_STR( syt->current->symbols, idName, h );
-    return ( h ? h->type : S_NONE );
+    do
+    {
+        HASH_FIND_STR( current->symbols, idName, h );
+        
+        if( h )
+            return 1;            
+        
+        current = current->parent;
+    }
+    while( current );
+    
+    return 0;
 }
  
 int SYT_AddSymbol( SymTable * syt, char * idName, int type )
 {
     if( !idName )
         return 0;
-        
-    /*if( type == S_NONE )
-        return 0;*/
-        
-    Hash * h;
-    HASH_FIND_STR( syt->current->symbols, idName, h );
     
-    if( h == NULL ) 
+    if( !SYT_CheckSymbol( syt, idName ) ) 
     {
-	    h = ( Hash* )malloc( sizeof( Hash ) );
-	    /*h->id = ( char* )malloc( strlen( idName ) * sizeof( char ) );
-	    strcpy( h->id, idName );*/
+	    Hash * h = ( Hash* )malloc( sizeof( Hash ) );
 	    h->id = idName;
 	    h->type = type;
 	
@@ -190,33 +194,95 @@ int SYT_AddSymbol( SymTable * syt, char * idName, int type )
 	return 0;
 }
 
-void SYT_VisitFunction( SymTable * syt, Ast * ast )
-{
-
-}
-
 void SYT_VisitDeclaration( SymTable * syt, Ast * ast )
 {
+    char * name = AST_FindId( ast );	                
+    int type = SYT_StringToType( AST_FindType( ast ) );
 
+    if( !SYT_AddSymbol( syt, name, type ) )	                
+        errorSymTable( ERROR_REDEFINED, name, AST_GetLine( ast ) );
 }
 
 void SYT_VisitAssign( SymTable * syt, Ast * ast )
 {
+    Ast * var = AST_GetChild( ast );
+    char * name = AST_FindId( var );
+    
+    free( var );
 
+    if( !SYT_CheckSymbol( syt, name ) )	                
+        errorSymTable( ERROR_UNDECLARED, name, AST_GetLine( ast ) );
 }
 
 void SYT_VisitCall( SymTable * syt, Ast * ast )
 {
+    char * name = AST_FindId( ast );
 
+    if( !SYT_CheckSymbol( syt, name ) )	                
+        errorSymTable( ERROR_UNDECLARED, name, AST_GetLine( ast ) );
+}
+
+void SYT_VisitFunction( SymTable * syt, Ast * ast )
+{
+    SYT_OpenScope( syt );
+    
+    Ast * child;
+    
+    for( child = AST_GetChild( ast ); child; child = AST_NextSibling( child ) )
+    {
+        switch( AST_GetType( ast ) )
+        {
+            case A_DECLVAR:
+                SYT_VisitDeclaration( syt, child );
+                break;
+                
+            case A_BLOCK:
+                {
+                    Ast * child2;
+                    
+                    for( child2 = AST_GetChild( ast ); child2; child2 = AST_NextSibling( child2 ) )                    
+                        SYT_ProcessNode( syt, child2 );                    
+                }
+                break;
+                
+            default:
+                break;                
+        }
+    }
 }
 
 void SYT_ProcessNode( SymTable * syt, Ast * ast )
 {
-    /*switch( AST_GetType( ast ) )
+    switch( AST_GetType( ast ) )
     {
+        case A_BLOCK:
+            SYT_OpenScope( syt );
+            break;
+            
         case A_FUNCTION:
             SYT_VisitFunction( syt, ast );
-    }*/
+            break;
+            
+        case A_DECLVAR:
+            SYT_VisitDeclaration( syt, ast );
+            break;
+            
+        case A_ASSIGN:
+            SYT_VisitAssign( syt, ast );
+            break;
+            
+        case A_CALL:
+            SYT_VisitCall( syt, ast );
+            break;
+    }
+    
+    Ast * child;
+	
+	for( child = AST_GetChild( ast ); child; child = AST_NextSibling( child ) )	
+	    SYT_ProcessNode( syt, child );	
+	
+	if( AST_GetType( ast ) == A_BLOCK )
+	    SYT_CloseScope( syt );
 }
 
 int SYT_StringToType( char * str )
@@ -240,9 +306,6 @@ void SYT_Build( SymTable * syt, Ast * ast )
 {
 	syt->ast = ast;	
 	
-	// Global scope
-	//SYT_OpenScope( syt );
-	
 	Ast * child;
 	
 	for( child = AST_GetChild( ast ); child; child = AST_NextSibling( child ) )
@@ -256,11 +319,13 @@ void SYT_Build( SymTable * syt, Ast * ast )
         if( !SYT_AddSymbol( syt, name, type ) )	                
             errorSymTable( ERROR_REDEFINED, name, AST_GetLine( child ) );
 	}
-	
-	free( child );
 		
-    SYT_ProcessNode( syt, ast );
-    
-    //SYT_CloseScope( syt );
+    for( child = AST_GetChild( ast ); child; child = AST_NextSibling( child ) )
+	{
+        if( AST_GetType( child ) != A_DECLVAR )
+        {
+            SYT_ProcessNode( syt, child );
+        }
+    }
 }
 
