@@ -59,6 +59,7 @@ int main( int argc, char * argv[] )
     SYT_Build( syt, PAR_GetAst( par ) );
     
     PAR_Delete( par );
+    SYT_Delete( syt );
     
 	return EXIT_SUCCESS;
 }

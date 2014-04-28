@@ -567,10 +567,16 @@ Ast * AST_NextSibling( Ast * ast )
 		return NULL;
 		
 	if( !ast->root )
+	{
+	    free( ast );
 		return NULL;
+    }
 		
 	if( !ast->root->next )
+	{
+	    free( ast );
 		return NULL;
+	}
 		
 	Ast * sibling = AST_New();
 	sibling->root = ast->root->next;

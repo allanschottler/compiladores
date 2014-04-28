@@ -83,7 +83,7 @@ void SCO_Delete( Scope * scope )
 	
 	for( i = 0; i < scope->nScopes; i++ )
 	{
-		SCO_Delete( scope->scopes[i] );
+		SCO_Delete( scope->scopes[i] );		
 	}
 	
 	HASH_ITER( hh, scope->symbols, h, tmp ) 
@@ -126,9 +126,9 @@ struct symtable
 SymTable * SYT_New()
 {
 	SymTable * syt = ( SymTable* )malloc( sizeof( SymTable ) );
-	syt->ast = 0;
-	syt->root = 0;
-	syt->current = 0;
+	syt->ast = NULL;
+	syt->root = SCO_New();
+	syt->current = syt->root;
 	
 	return syt;
 }
@@ -136,6 +136,7 @@ SymTable * SYT_New()
 void SYT_Delete( SymTable * syt )
 {
 	SCO_Delete( syt->root );
+	free( syt );
 }
 
 void SYT_OpenScope( SymTable * syt )
@@ -177,8 +178,9 @@ int SYT_AddSymbol( SymTable * syt, char * idName, int type )
     if( h == NULL ) 
     {
 	    h = ( Hash* )malloc( sizeof( Hash ) );
-	    h->id = ( char* )malloc( strlen( idName ) * sizeof( char ) );
-	    strcpy( h->id, idName );
+	    /*h->id = ( char* )malloc( strlen( idName ) * sizeof( char ) );
+	    strcpy( h->id, idName );*/
+	    h->id = idName;
 	    h->type = type;
 	
 	    HASH_ADD_STR( syt->current->symbols, id, h ); //This works cuz macros
@@ -210,11 +212,11 @@ void SYT_VisitCall( SymTable * syt, Ast * ast )
 
 void SYT_ProcessNode( SymTable * syt, Ast * ast )
 {
-    switch( AST_GetType( ast ) )
+    /*switch( AST_GetType( ast ) )
     {
         case A_FUNCTION:
             SYT_VisitFunction( syt, ast );
-    }
+    }*/
 }
 
 int SYT_StringToType( char * str )
@@ -239,38 +241,26 @@ void SYT_Build( SymTable * syt, Ast * ast )
 	syt->ast = ast;	
 	
 	// Global scope
-	SYT_OpenScope( syt );
+	//SYT_OpenScope( syt );
 	
 	Ast * child;
 	
 	for( child = AST_GetChild( ast ); child; child = AST_NextSibling( child ) )
 	{
-	    switch( AST_GetType( child ) )
-	    {
-	        case A_FUNCTION:
-	            {
-	                char * name = AST_FindId( child );	                
-	                int type = SYT_StringToType( AST_FindType( child ) );
-	                
-	                if( !SYT_AddSymbol( syt, name, type ) )
-	                {
-	                    errorSymTable( ERROR_REDEFINED, name, AST_GetLine( child ) );
-	                }
-	            }
-	            
-	            break;
-	            
-	        case A_DECLVAR:
-	            break;
-	            
-            default:
-	            errorSymTable( ERROR_UNKNOWN, NULL, 0 );
-	    }
+        if( AST_GetType( child ) != A_FUNCTION && AST_GetType( child ) != A_DECLVAR )
+            errorSymTable( ERROR_UNKNOWN, NULL, 0 );	        
+
+        char * name = AST_FindId( child );	                
+        int type = SYT_StringToType( AST_FindType( child ) );
+
+        if( !SYT_AddSymbol( syt, name, type ) )	                
+            errorSymTable( ERROR_REDEFINED, name, AST_GetLine( child ) );
 	}
 	
 	free( child );
 		
-    //SYT_ProcessNode( syt, ast );
-    SYT_CloseScope( syt );
+    SYT_ProcessNode( syt, ast );
+    
+    //SYT_CloseScope( syt );
 }
 
