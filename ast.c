@@ -580,36 +580,46 @@ Ast * AST_NextSibling( Ast * ast )
 	return sibling;
 }
 
-/*char * AST_FindId( Ast ** array, int n )
+char * AST_FindId( Ast * ast )
 {
-    int i;
+    int type = ast->root->type;
     
-    for( i = 0; i < n; i++ )
+    if( type != A_FUNCTION && type != A_CALL && type != A_VAR && type != A_DECLVAR )
+        return NULL;
+        
+    Node * child;
+    
+    for( child = ast->root->child; child; child = child->next )
     {
-        if( AST_GetType( array[i] ) == A_ID )
-            return AST_GetValue( array[i] );
+        if( child->type == A_ID )
+            return child->value;
     }
     
     return NULL;
 }
 
-char * AST_FindType( Ast ** array, int n )
+char * AST_FindType( Ast * ast )
 {
-    int i;
+    int type = ast->root->type;
     
-    for( i = 0; i < n; i++ )
+    if( type != A_FUNCTION && type != A_DECLVAR )
+        return NULL;
+        
+    Node * child;
+    
+    for( child = ast->root->child; child; child = child->next )
     {
-        if( AST_GetType( array[i] ) == A_TYPE )
-        {
-            Ast ** children;
-            int nChildren = AST_GetChildrenArray( array[i], &children );
-            char * value = AST_GetValue( children[nChildren - 1] );
+        if( child->type == A_TYPE )
+        {            
+            child = child->child;
             
-            AST_FreeChildrenArray( children, nChildren );
-            return value;
+            while( strcmp( child->value, "[]" ) == 0 )
+                child = child->next;
+                
+            return child->value;
         }
     }
     
     return NULL;
-}*/
+}
 

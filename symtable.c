@@ -168,8 +168,8 @@ int SYT_AddSymbol( SymTable * syt, char * idName, int type )
     if( !idName )
         return 0;
         
-    if( type == S_NONE )
-        return 0;
+    /*if( type == S_NONE )
+        return 0;*/
         
     Hash * h;
     HASH_FIND_STR( syt->current->symbols, idName, h );
@@ -217,6 +217,23 @@ void SYT_ProcessNode( SymTable * syt, Ast * ast )
     }
 }
 
+int SYT_StringToType( char * str )
+{
+    if( !str )
+        return S_NONE;
+        
+    if( strcmp( str, "char" ) == 0 )
+        return S_CHAR;
+    else if( strcmp( str, "int" ) == 0 )
+        return S_INT;
+    else if( strcmp( str, "bool" ) == 0 )
+        return S_BOOL;
+    else if( strcmp( str, "string" ) == 0 )
+        return S_STRING;
+        
+    return S_NONE;
+}
+
 void SYT_Build( SymTable * syt, Ast * ast )
 {
 	syt->ast = ast;	
@@ -232,24 +249,12 @@ void SYT_Build( SymTable * syt, Ast * ast )
 	    {
 	        case A_FUNCTION:
 	            {
-	                Ast ** funcChildren;
-	                int nFChildren = AST_GetChildrenArray( children[i], &funcChildren );                
-	                char * name = AST_FindId( funcChildren, nFChildren );
-	                char * strType = AST_FindType( funcChildren, nFChildren );
-	                int type = S_NONE;
+	                char * name = AST_FindId( child );	                
+	                int type = SYT_StringToType( AST_FindType( child ) );
 	                
-	                if( strcmp( strType, "char" ) == 0 )
-	                    type = S_CHAR;
-	                else if( strcmp( strType, "int" ) == 0 )
-	                    type = S_INT;
-	                else if( strcmp( strType, "bool" ) == 0 )
-	                    type = S_BOOL;
-	                else if( strcmp( strType, "string" ) == 0 )
-	                    type = S_STRING;
-	                    
 	                if( !SYT_AddSymbol( syt, name, type ) )
 	                {
-	                    errorSymTable( ERROR_REDEFINED, name, AST_GetLine( children[i] ) );
+	                    errorSymTable( ERROR_REDEFINED, name, AST_GetLine( child ) );
 	                }
 	            }
 	            
@@ -262,6 +267,8 @@ void SYT_Build( SymTable * syt, Ast * ast )
 	            errorSymTable( ERROR_UNKNOWN, NULL, 0 );
 	    }
 	}
+	
+	free( child );
 		
     //SYT_ProcessNode( syt, ast );
     SYT_CloseScope( syt );

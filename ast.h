@@ -87,8 +87,8 @@ Ast * AST_GetChild( Ast * ast );
 
 Ast * AST_NextSibling( Ast * ast );
 
-/*char * AST_FindId( Ast ** array, int n );
+char * AST_FindId( Ast * ast );
 
-char * AST_FindType( Ast ** array, int n );*/
+char * AST_FindType( Ast * ast );
 
 #endif
