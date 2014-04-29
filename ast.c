@@ -533,10 +533,7 @@ int AST_GetType( Ast * ast )
 
 char * AST_GetValue( Ast * ast )
 {
-    if( ast->root->value )
-        return ast->root->value;
-        
-    return NULL;
+    return ast->root->value;    
 }
 
 int AST_GetLine( Ast * ast )
