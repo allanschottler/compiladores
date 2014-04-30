@@ -1,6 +1,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <assert.h>
 
 #include "ast.h"
 #include "token.h"
@@ -14,6 +15,8 @@ struct node
 	int type;
 	char * value;
 	int line;
+	int annType;
+	int ptrType;
 	Node * parent;
 	Node * next;
 	Node * prev;
@@ -25,6 +28,8 @@ Node * ASN_New( int type, char * value, int line )
 	Node * node = ( Node* )malloc( sizeof( Node ) );
 	node->type = type;
 	node->line = line;
+	node->annType = 0;
+	node->ptrType = 0;
 	node->value = NULL;
 	
 	if( value )	
@@ -475,70 +480,28 @@ void AST_Dump( Ast * ast )
     ASN_Dump( ast->root, 1 );
 }
 
-// I hate everything about this function, but it's saturday night
-/*int AST_GetChildrenArray( Ast * ast, Ast *** outChildren )
-{
-    if( !ast )
-        return 0;
-    
-    if( !ast->root )
-        return 0;
-            
-    Node * currNode = ast->root->child;
-    
-    if( !currNode )
-        return 0;
-        
-    int count = 1;
-    
-    while( currNode->next )
-    {
-        count++;
-        currNode = currNode->next;
-    }
-    
-    *outChildren = ( Ast** )malloc( count * sizeof( Ast* ) );
-    currNode = ast->root->child;
-
-    int i = 0;
-    
-    do    
-    {
-        Ast * child = AST_New();        
-        child->root = currNode;
-        ( *outChildren )[i++] = child;
-        currNode = currNode->next;        
-    }
-    while( currNode );
-    
-    return count;
-}
-
-void AST_FreeChildrenArray( Ast ** children, int nChildren )
-{
-    int i;
-    
-    for( i = 0; i < nChildren; i++ )
-    {
-        free( children[i] );
-    }   
-    
-    free( children );
-}*/
-
-int AST_GetType( Ast * ast )
+int AST_GetNodeType( Ast * ast )
 {
     return ast->root->type;
 }
 
-char * AST_GetValue( Ast * ast )
+char * AST_GetNodeValue( Ast * ast )
 {
     return ast->root->value;    
 }
 
-int AST_GetLine( Ast * ast )
+int AST_GetNodeLine( Ast * ast )
 {
     return ast->root->line;
+}
+
+int AST_GetNodeAnnotation( Ast * ast, int * ptrType )
+{
+    assert( ast->root->annType != 0 );
+    
+    *ptrType = ast->root->ptrType;
+    
+    return ast->root->annType;
 }
 
 Ast * AST_GetChild( Ast * ast )
@@ -601,13 +564,14 @@ char * AST_FindId( Ast * ast )
     return NULL;
 }
 
-char * AST_FindType( Ast * ast )
+char * AST_FindType( Ast * ast, int * outPtr )
 {
     int type = ast->root->type;
     
     if( type != A_FUNCTION && type != A_DECLVAR )
         return NULL;
         
+    *outPtr = 0;
     Node * child;
     
     for( child = ast->root->child; child; child = child->next )
@@ -617,12 +581,21 @@ char * AST_FindType( Ast * ast )
             child = child->child;
             
             while( strcmp( child->value, "[]" ) == 0 )
+            {
+                ( *outPtr )++;
                 child = child->next;
+            }
                 
             return child->value;
         }
     }
     
     return NULL;
+}
+
+void AST_Annotate( Ast * ast, int type, int ptrType )
+{
+    ast->root->annType = type;
+    ast->root->ptrType = ptrType;
 }
 

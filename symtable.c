@@ -11,20 +11,20 @@
 #define ERROR_REDEFINED     1
 #define ERROR_UNKNOWN       2
 
-static void errorSymTable( int error, char * name, int line )
+static void errorSymbol( int error, char * name, int line )
 {
     switch( error )
     {
         case ERROR_UNDECLARED:
-            fprintf( stderr, "!Typing Error [line %d]: Undeclared identifier \'%s\'.\n", line, name );
+            fprintf( stderr, "!Symbol Error [line %d]: Undeclared identifier \'%s\'.\n", line, name );
             break;
             
         case ERROR_REDEFINED:
-            fprintf( stderr, "!Typing Error [line %d]: Redefinition of identifier \'%s\'.\n", line, name );
+            fprintf( stderr, "!Symbol Error [line %d]: Redefinition of identifier \'%s\'.\n", line, name );
             break;
             
         case ERROR_UNKNOWN:
-            fprintf( stderr, "!Typing Error: Internal error.\n" );
+            fprintf( stderr, "!Symbol Error: Internal error.\n" );
             break;
             
         default:
@@ -36,12 +36,21 @@ static void errorSymTable( int error, char * name, int line )
     exit( EXIT_FAILURE );
 }
 
+static void errorTyping( int assert, const char * error, int line )
+{
+    if( assert )
+        return;
+        
+    fprintf( stderr, "!Typing Error [line %d]: %s\n", line, error );
+}
+
 typedef struct hash Hash;
 
 struct hash
 {
 	char * id;
 	int type;
+	int ptrType;
 	UT_hash_handle hh;
 };
 
@@ -120,6 +129,7 @@ void SCO_AppendScope( Scope * parent, Scope * child )
 }
 
 void SYT_ProcessNode( SymTable * syt, Ast * ast );
+void SYT_VisitExpression( SymTable * syt, Ast * ast );
 
 struct symtable
 {
@@ -161,7 +171,7 @@ void SYT_CloseScope( SymTable * syt )
 	syt->current = syt->current->parent;
 }
 
-int SYT_CheckSymbol( SymTable * syt, const char * idName )
+int SYT_CheckSymbol( SymTable * syt, const char * idName, int * outPtr )
 {
 	Hash * h;
 	Scope * current = syt->current;
@@ -171,7 +181,10 @@ int SYT_CheckSymbol( SymTable * syt, const char * idName )
         HASH_FIND_STR( current->symbols, idName, h );
         
         if( h )
-            return 1;            
+        {
+            *outPtr = h->ptrType;
+            return h->type; 
+        }           
         
         current = current->parent;
     }
@@ -180,16 +193,20 @@ int SYT_CheckSymbol( SymTable * syt, const char * idName )
     return 0;
 }
  
-int SYT_AddSymbol( SymTable * syt, char * idName, int type )
+int SYT_AddSymbol( SymTable * syt, char * idName, int type, int ptrType )
 {
     if( !idName )
         return 0;
     
-    if( !SYT_CheckSymbol( syt, idName ) ) 
+    int garbage;
+    int check = SYT_CheckSymbol( syt, idName, &garbage );
+    
+    if( !check ) 
     {
 	    Hash * h = ( Hash* )malloc( sizeof( Hash ) );
 	    h->id = idName;
 	    h->type = type;
+	    h->ptrType = ptrType;
 	
 	    HASH_ADD_STR( syt->current->symbols, id, h ); //This works cuz macros
 	    return 1;
@@ -198,40 +215,49 @@ int SYT_AddSymbol( SymTable * syt, char * idName, int type )
 	return 0;
 }
 
-void SYT_VisitID( SymTable * syt, Ast * ast )
-{
-    char * name = AST_GetValue( ast );
-    
-    if( !SYT_CheckSymbol( syt, name ) )	                
-        errorSymTable( ERROR_UNDECLARED, name, AST_GetLine( ast ) );
-}
-
 void SYT_VisitDeclaration( SymTable * syt, Ast * ast )
 {
-    char * name = AST_FindId( ast );	                
-    int type = SYT_StringToType( AST_FindType( ast ) );
+    char * name = AST_FindId( ast );
+    int ptrType;	                
+    int type = SYT_StringToType( AST_FindType( ast, &ptrType ) );
 
-    if( !SYT_AddSymbol( syt, name, type ) )	                
-        errorSymTable( ERROR_REDEFINED, name, AST_GetLine( ast ) );
+    if( !SYT_AddSymbol( syt, name, type, ptrType ) )	                
+        errorSymbol( ERROR_REDEFINED, name, AST_GetNodeLine( ast ) );
+}
+
+void SYT_VisitID( SymTable * syt, Ast * ast )
+{
+    char * name = AST_GetNodeValue( ast );
+    int ptrType;
+    int type = SYT_CheckSymbol( syt, name, &ptrType );
+    
+    if( !type )	                
+        errorSymbol( ERROR_UNDECLARED, name, AST_GetNodeLine( ast ) );
+        
+    AST_Annotate( ast, type, ptrType );
 }
 
 void SYT_VisitAssign( SymTable * syt, Ast * ast )
 {
     Ast * var = AST_GetChild( ast );
     char * name = AST_FindId( var );
+    int ptrType;
+    int type = SYT_CheckSymbol( syt, name, &ptrType );
     
     free( var );
-
-    if( !SYT_CheckSymbol( syt, name ) )	                
-        errorSymTable( ERROR_UNDECLARED, name, AST_GetLine( ast ) );
+    
+    if( !type )	                
+        errorSymbol( ERROR_UNDECLARED, name, AST_GetNodeLine( ast ) );
 }
 
 void SYT_VisitCall( SymTable * syt, Ast * ast )
 {
     char * name = AST_FindId( ast );
-
-    if( !SYT_CheckSymbol( syt, name ) )	                
-        errorSymTable( ERROR_UNDECLARED, name, AST_GetLine( ast ) );
+    int ptrType;
+    int type = SYT_CheckSymbol( syt, name, &ptrType );
+    
+    if( !type )	                
+        errorSymbol( ERROR_UNDECLARED, name, AST_GetNodeLine( ast ) );
 }
 
 void SYT_VisitFunction( SymTable * syt, Ast * ast )
@@ -242,7 +268,7 @@ void SYT_VisitFunction( SymTable * syt, Ast * ast )
     
     for( child = AST_GetChild( ast ); child; child = AST_NextSibling( child ) )
     {
-        switch( AST_GetType( ast ) )
+        switch( AST_GetNodeType( ast ) )
         {
             case A_DECLVAR:
                 SYT_VisitDeclaration( syt, child );
@@ -265,9 +291,205 @@ void SYT_VisitFunction( SymTable * syt, Ast * ast )
     SYT_CloseScope( syt );
 }
 
+void SYT_VisitLitString( SymTable * syt, Ast * ast )
+{
+    AST_Annotate( ast, S_STRING, 0 );
+}
+
+void SYT_VisitLitInt( SymTable * syt, Ast * ast )
+{
+    AST_Annotate( ast, S_INT, 0 );
+}
+
+void SYT_VisitLitBool( SymTable * syt, Ast * ast )
+{
+    AST_Annotate( ast, S_BOOL, 0 );
+}
+
+void SYT_VisitVar( SymTable * syt, Ast * ast )
+{
+    Ast * child = AST_GetChild( ast );
+    int ptrType;
+    int type = AST_GetNodeAnnotation( ast, &ptrType );    
+    int count = 0;    
+    
+    child = AST_NextSibling( child );
+    
+    while( child )
+    {        
+        count++;     
+        
+        int expPtrType;        
+        int expType = AST_GetNodeAnnotation( child, &expPtrType );
+        
+        errorTyping( expType == S_INT, "Expression does not evaluate to type \'int\'.", AST_GetNodeLine( child ) );
+        errorTyping( expPtrType == 0, "Expression does not evaluate to type \'int\'.", AST_GetNodeLine( child ) );
+        
+        child = AST_NextSibling( child );
+    }   
+    
+    errorTyping( count <= ptrType, "Expression does not match expected pointer dimension.", AST_GetNodeLine( ast ) );
+    
+    AST_Annotate( ast, type, ptrType - count );
+}
+
+void SYT_VisitNew( SymTable * syt, Ast * ast )
+{
+    Ast * child = AST_GetChild( ast );
+    int ptrType;
+    int type = AST_GetNodeAnnotation( child, &ptrType );
+    
+    errorTyping( type == S_INT, "Expression does not evaluate to type \'int\'.", AST_GetNodeLine( child ) );
+    errorTyping( ptrType == 0, "Expression does not evaluate to type \'int\'.", AST_GetNodeLine( child ) );
+        
+    child = AST_NextSibling( child );    
+    type = AST_GetNodeAnnotation( child, &ptrType );
+    
+    AST_Annotate( ast, type, ptrType + 1 );
+}
+
+void SYT_VisitNot( SymTable * syt, Ast * ast )
+{
+    Ast * child = AST_GetChild( ast );
+    int ptrType;
+    int type = AST_GetNodeAnnotation( child, &ptrType );
+    
+    free( child );
+    
+    errorTyping( type == S_BOOL, "Expression does not evaluate to type \'bool\'.", AST_GetNodeLine( child ) );
+    errorTyping( ptrType == 0, "Expression does not evaluate to type \'bool\'.", AST_GetNodeLine( child ) );
+    
+    AST_Annotate( ast, S_BOOL, 0 );
+}
+
+void SYT_VisitNegative( SymTable * syt, Ast * ast )
+{
+    Ast * child = AST_GetChild( ast );
+    int ptrType;
+    int type = AST_GetNodeAnnotation( child, &ptrType );
+    
+    free( child );
+    
+    errorTyping( type == S_INT, "Expression does not evaluate to type \'int\'.", AST_GetNodeLine( child ) );
+    errorTyping( ptrType == 0, "Expression does not evaluate to type \'int\'.", AST_GetNodeLine( child ) );
+    
+    AST_Annotate( ast, S_INT, 0 );
+}
+
+void SYT_VisitArithmitic( SymTable * syt, Ast * ast )
+{
+    for( child = AST_GetChild( ast ); child; child = AST_NextSibling( child ) )
+    {
+        int ptrType;
+        int type = AST_GetNodeAnnotation( child, &ptrType );
+        
+        errorTyping( ( type == S_INT || type == S_CHAR ), "Expression does not evaluate to type \'int\'.", AST_GetNodeLine( child ) );
+        errorTyping( ptrType == 0, "Expression does not evaluate to type \'int\'.", AST_GetNodeLine( child ) );
+        
+    }
+    
+    AST_Annotate( ast, S_INT, 0 );
+}
+
+void SYT_VisitLogic( SymTable * syt, Ast * ast )
+{
+    for( child = AST_GetChild( ast ); child; child = AST_NextSibling( child ) )
+    {
+        int ptrType;
+        int type = AST_GetNodeAnnotation( child, &ptrType );
+        
+        errorTyping( type == S_BOOL, "Expression does not evaluate to type \'bool\'.", AST_GetNodeLine( child ) );
+        errorTyping( ptrType == 0, "Expression does not evaluate to type \'bool\'.", AST_GetNodeLine( child ) );
+        
+    }
+    
+    AST_Annotate( ast, S_BOOL, 0 );
+}
+
+void SYT_VisitComparison( SymTable * syt, Ast * ast )
+{
+    for( child = AST_GetChild( ast ); child; child = AST_NextSibling( child ) )
+    {
+        int ptrType;
+        int type = AST_GetNodeAnnotation( child, &ptrType );
+        
+        errorTyping( type == S_INT, "Expression does not evaluate to type \'int\'.", AST_GetNodeLine( child ) );
+        errorTyping( ptrType == 0, "Expression does not evaluate to type \'int\'.", AST_GetNodeLine( child ) );
+        
+    }
+    
+    AST_Annotate( ast, S_BOOL, 0 );
+}
+
+void SYT_VisitExpression( SymTable * syt, Ast * ast )
+{
+    Ast * child;
+    
+    for( child = AST_GetChild( ast ); child; child = AST_NextSibling( child ) )
+        SYT_VisitExpression( syt, child );    
+    
+    int nodeType = AST_GetNodeType( ast );
+    
+    switch( nodeType )
+    {
+        case A_ID:
+            SYT_VisitID( syt, ast );
+            break;
+        
+        case A_LITSTRING:
+            SYT_VisitLitString( syt, ast );            
+            break;
+        
+        case A_LITINT:
+            SYT_VisitLitInt( syt, ast );            
+            break;
+            
+        case A_TRUE:
+        case A_FALSE:
+            SYT_VisitLitBool( syt, ast ); 
+            break;
+        
+        case A_VAR:
+            SYT_VisitVar( syt, ast );
+            break;
+        
+        case A_NEW:
+            SYT_VisitNew( syt, ast );
+            break;
+                
+        case A_NOT:
+            SYT_VisitNot( syt, ast );
+            break;
+        
+        case A_NEGATIVE:
+            SYT_VisitNegative( syt, ast );
+            break;
+                         
+        case A_ADD:
+        case A_SUBTRACT:
+        case A_MULTIPLY:
+        case A_DIVIDE:
+            SYT_VisitArithmitic( syt, ast );
+            break;
+            
+        case A_AND:
+        case A_OR:
+            SYT_VisitLogic( syt, ast );
+            break;
+            
+        case A_EQ:
+        case A_NEQ:
+        case A_LARGER:
+        case A_SMALLER:
+        case A_LARGEREQ:
+        case A_SMALLEREQ:
+            SYT_VisitComparison( syt, ast );
+            break;            
+    }
+}
 void SYT_ProcessNode( SymTable * syt, Ast * ast )
 {
-    switch( AST_GetType( ast ) )
+    switch( AST_GetNodeType( ast ) )
     {
         case A_BLOCK:
             SYT_OpenScope( syt );
@@ -292,14 +514,32 @@ void SYT_ProcessNode( SymTable * syt, Ast * ast )
         case A_CALL:
             SYT_VisitCall( syt, ast );
             break;
+            
+        case A_IF:
+            SYT_VisitIf( syt, ast );
+            break;
+            
+        case A_WHILE:
+            SYT_VisitWhile( syt, ast );
+            break;
+            
+        default:
+            errorSymbol( ERROR_UNKNOWN, NULL, 0 );
+            break;            
     }
     
     Ast * child;
 	
-	for( child = AST_GetChild( ast ); child; child = AST_NextSibling( child ) )	
-	    SYT_ProcessNode( syt, child );	
+	for( child = AST_GetChild( ast ); child; child = AST_NextSibling( child ) )
+	{
+	    // Is this correct?
+	    int garbage;
+	    
+	    if( AST_GetNodeAnnotation( child, garbage ) )	
+	        SYT_ProcessNode( syt, child );
+	}	
 	
-	if( AST_GetType( ast ) == A_BLOCK )
+	if( AST_GetNodeType( ast ) == A_BLOCK )
 	    SYT_CloseScope( syt );
 }
 
@@ -328,19 +568,20 @@ void SYT_Build( SymTable * syt, Ast * ast )
 	
 	for( child = AST_GetChild( ast ); child; child = AST_NextSibling( child ) )
 	{
-        if( AST_GetType( child ) != A_FUNCTION && AST_GetType( child ) != A_DECLVAR )
-            errorSymTable( ERROR_UNKNOWN, NULL, 0 );	        
+        if( AST_GetNodeType( child ) != A_FUNCTION && AST_GetNodeType( child ) != A_DECLVAR )
+            errorSymbol( ERROR_UNKNOWN, NULL, 0 );	        
 
-        char * name = AST_FindId( child );	                
-        int type = SYT_StringToType( AST_FindType( child ) );
+        char * name = AST_FindId( child );
+        int ptrType;	                
+        int type = SYT_StringToType( AST_FindType( child, &ptrType ) );
 
-        if( !SYT_AddSymbol( syt, name, type ) )	                
-            errorSymTable( ERROR_REDEFINED, name, AST_GetLine( child ) );
+        if( !SYT_AddSymbol( syt, name, type, ptrType ) )	                
+            errorSymbol( ERROR_REDEFINED, name, AST_GetNodeLine( child ) );
 	}
 		
     for( child = AST_GetChild( ast ); child; child = AST_NextSibling( child ) )
 	{
-        if( AST_GetType( child ) != A_DECLVAR )
+        if( AST_GetNodeType( child ) != A_DECLVAR )
         {
             SYT_ProcessNode( syt, child );
         }

@@ -73,15 +73,13 @@ int AST_TokenTypeToAst( int tokenType );
 
 void AST_Dump( Ast * ast );
 
-/*int AST_GetChildrenArray( Ast * ast, Ast *** children );
+int AST_GetNodeType( Ast * ast );
 
-void AST_FreeChildrenArray( Ast ** children, int nChildren );*/
+char * AST_GetNodeValue( Ast * ast );
 
-int AST_GetType( Ast * ast );
+int AST_GetNodeLine( Ast * ast );
 
-char * AST_GetValue( Ast * ast );
-
-int AST_GetLine( Ast * ast );
+int AST_GetNodeAnnotation( Ast * ast, int * ptrType );
 
 Ast * AST_GetChild( Ast * ast );
 
@@ -89,6 +87,8 @@ Ast * AST_NextSibling( Ast * ast );
 
 char * AST_FindId( Ast * ast );
 
-char * AST_FindType( Ast * ast );
+char * AST_FindType( Ast * ast, int * outPtr );
+
+void AST_Annotate( Ast * ast, int type, int ptrType );
 
 #endif
