@@ -1,0 +1,45 @@
+fun main(argc:int, argv:[]string)
+
+    i:bool
+    i2:int
+    s:string
+    c:char
+    
+    c=1
+    i2=c
+    i2 = lol(10, false, true, "this", 10) + c
+    argv[1][10+i2] = c
+    isTrue(true,1)
+    
+    s = argv[i2]
+    while s<>""
+    
+        s=argv[i2]
+        i2=i2+1
+    
+    loop
+     
+end
+
+fun print(a:string)
+
+
+end
+
+fun lol(a:int, b:bool, b2:bool, a2:string, c:char):int
+    return 1
+end
+
+fun isTrue(b:bool,a:int)
+    
+    if a = 1
+        return
+    end
+    
+    return 
+end
+
+/*
+BUGS:
+
+*/
