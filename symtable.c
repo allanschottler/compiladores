@@ -279,7 +279,9 @@ void SYT_VisitCall( SymTable * syt, Ast * ast )
     
     Ast * args = AST_GetChild( ast );
     args = AST_NextSibling( args );
-    SYT_VisitExpression( syt, args );
+    
+    if( !AST_GetNodeAnnotation( args ) )
+        SYT_VisitExpression( syt, args );
     
     Symbol * s1;
     Symbol * s2 = AST_GetNodeAnnotation( args );

@@ -244,12 +244,15 @@ void ASN_Dump( Node * node, int depth )
 {
     char * str = ASN_ToString( node->type );
     char * type = SYM_SymbolToString( node->annotation );
-    printf("%s %s @%d ", str, node->value, node->line );
+    printf( "%s ", str );
+    
+    if( node->value )
+        printf( "%s ", node->value );        
     
     if( strcmp( type, "" ) != 0 )
-        printf("of %s", type );
+        printf("of %s ", type );
         
-    printf("\n");
+    printf("@%d\n", node->line );
     
     free( str );
     free( type );
