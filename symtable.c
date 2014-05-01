@@ -232,6 +232,7 @@ void SYT_VisitDeclaration( SymTable * syt, Ast * ast )
         errorSymbol( ERROR_REDEFINED, name, AST_GetNodeLine( ast ) );
         
     AST_Annotate( child, s );
+    AST_Annotate( ast, s );
 }
 
 void SYT_VisitID( SymTable * syt, Ast * ast )
@@ -274,13 +275,15 @@ void SYT_VisitCall( SymTable * syt, Ast * ast )
     int type = SYT_CheckSymbol( syt, name, &s );
     
     if( !type )	                
-        errorSymbol( ERROR_UNDECLARED, name, AST_GetNodeLine( ast ) );        
+        errorSymbol( ERROR_UNDECLARED, name, AST_GetNodeLine( ast ) );
     
     Ast * args = AST_GetChild( ast );
     args = AST_NextSibling( args );
+    SYT_VisitExpression( syt, args );
     
     Symbol * s1;
     Symbol * s2 = AST_GetNodeAnnotation( args );
+        
     int garbage = SYT_CheckSymbol( syt, name, &s1 );
     
     free( args );
@@ -322,7 +325,24 @@ void SYT_VisitWhile( SymTable * syt, Ast * ast )
             
     free( child );
 }
-            
+ 
+void SYT_VisitReturn( SymTable * syt, Ast * ast )
+{
+    Ast * child = AST_GetChild( ast );
+    Symbol * s = SYM_New( S_VOID, 0 );
+    
+    if( child )
+    {
+        free( s );
+        SYT_VisitExpression( syt, child );
+        s = AST_GetNodeAnnotation( child );
+    }
+    
+    AST_Annotate( ast, s );
+    
+    free( child );
+}
+           
 void SYT_VisitParams( SymTable * syt, Ast * ast )
 {
     Ast * child;
@@ -577,11 +597,7 @@ void SYT_VisitExpression( SymTable * syt, Ast * ast )
         case A_LARGEREQ:
         case A_SMALLEREQ:
             SYT_VisitComparison( syt, ast );
-            break; 
-            
-        /*default:
-            errorSymbol( ERROR_UNKNOWN, NULL, 0 );
-            break; */                      
+            break;                      
     }
 }
 
@@ -590,23 +606,27 @@ void SYT_VisitFunction( SymTable * syt, Ast * ast )
     char * name = AST_FindId( ast );
     int ptrType;	                
     int type = SYM_StringToType( AST_FindType( ast, &ptrType ) );
-    Ast * child;
     Symbol * s = SYM_New( type, ptrType );
+    Ast * params = AST_GetChild( ast );
+    params = AST_NextSibling( params );
     
-    for( child = AST_GetChild( ast ); child; child = AST_NextSibling( child ) )
-	{
-	    switch( AST_GetNodeType( child ) )
+    if( AST_GetNodeType( params ) == A_PARAMS )
+    {
+        Ast * child;
+        
+        for( child = AST_GetChild( params ); child; child = AST_NextSibling( child ) )
 	    {
-	        case A_DECLVAR:
+	        if( AST_GetNodeType( child ) == A_DECLVAR )
 	        {
 	            int paramPtrType;	                
                 int paramType = SYM_StringToType( AST_FindType( child, &paramPtrType ) );
                 
-                SYM_PushParam( s, paramType, paramPtrType );           
-            }
-	            break;
+                SYM_PushParam( s, paramType, paramPtrType );
+	        }
 	    }
 	}
+	
+	free( params );
 	
     if( !SYT_AddSymbol( syt, name, s ) )
         errorSymbol( ERROR_REDEFINED, name, AST_GetNodeLine( ast ) );
@@ -633,6 +653,31 @@ void SYT_VisitGlobals( SymTable * syt, Ast * ast )
 	            break;
 	    } 
 	}
+}
+
+int SYT_AssertReturns( SymTable * syt, Ast * ast, int type, int ptrType )
+{
+    Ast * child;
+    int foundReturn = 0;
+    
+    for( child = AST_GetChild( ast ); child; child = AST_NextSibling( child ) )
+	{
+	    if( AST_GetNodeType( child ) == A_RETURN )
+	    {
+	        Symbol * s = AST_GetNodeAnnotation( child );
+            int returnType = SYM_GetType( s );
+            int returnPtrType = SYM_GetPtrType( s );        
+            
+            errorTyping( ( type == returnType && ptrType == returnPtrType ), "Return expression does not evaluate to function return type.", AST_GetNodeLine( child ) );
+            
+            foundReturn = 1;   
+	    }
+	    
+	    if( SYT_AssertReturns( syt, child, type, ptrType ) )
+	        foundReturn = 1;
+	}
+	
+	return foundReturn;
 }
 
 void SYT_ProcessNode( SymTable * syt, Ast * ast )
@@ -670,6 +715,10 @@ void SYT_ProcessNode( SymTable * syt, Ast * ast )
             
         case A_WHILE:
             SYT_VisitWhile( syt, ast );
+            break;
+            
+        case A_RETURN:
+            SYT_VisitReturn( syt, ast );
             break;                    
     }
     
@@ -681,7 +730,24 @@ void SYT_ProcessNode( SymTable * syt, Ast * ast )
 	        SYT_ProcessNode( syt, child );
 	}	
 	
-	if( AST_GetNodeType( ast ) == A_BLOCK || AST_GetNodeType( ast ) == A_FUNCTION )
+	if( AST_GetNodeType( ast ) == A_FUNCTION )
+	{
+	    SYT_CloseScope( syt );
+	    
+	    Symbol * s;
+	    int type = SYT_CheckSymbol( syt, AST_FindId( ast ), &s );     
+	    
+	    if( type != S_VOID )
+	    {
+	        errorTyping( SYT_AssertReturns( syt, ast, type, SYM_GetPtrType( s ) ), "No return expression for function", AST_GetNodeLine( ast ) );
+	    }
+	    else
+	    {
+	        int hasReturn = SYT_AssertReturns( syt, ast, type, SYM_GetPtrType( s ) ); //optional
+	    }
+	}
+	    
+	if( AST_GetNodeType( ast ) == A_BLOCK )
 	    SYT_CloseScope( syt );
 }
 
