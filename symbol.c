@@ -67,8 +67,16 @@ int SYM_CompareParams( Symbol * sym1, Symbol * sym2 )
     
     for( i = 0; i < sym1->nParams; i++ )
     {
-        if( sym1->paramsType[i] != sym2->paramsType[i] || sym1->paramsPtrType[i] != sym2->paramsPtrType[i] )
+        if( sym1->paramsPtrType[i] != sym2->paramsPtrType[i] )
             return 0;
+            
+        if( sym1->paramsType[i] != sym2->paramsType[i] )
+        {
+            if( ( sym1->paramsType[i] == S_CHAR && sym2->paramsType[i] == S_INT ) || ( sym2->paramsType[i] == S_CHAR && sym1->paramsType[i] == S_INT ) )
+                return 1;
+                
+            return 0;
+        }            
     }
     
     return 1;

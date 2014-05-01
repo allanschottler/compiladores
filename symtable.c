@@ -265,7 +265,20 @@ void SYT_VisitAssign( SymTable * syt, Ast * ast )
     
     free( child );
     
-    errorTyping( ( type1 == type2 && ptrType1 == ptrType2 ), "Expression does not evaluate to variable\'s type.", AST_GetNodeLine( ast ) );        
+    errorTyping( ptrType1 == ptrType2, "Expressions not matching type.", AST_GetNodeLine( child ) );
+    
+    if( type1 == S_CHAR )
+    {
+        errorTyping( ( type2 == S_CHAR || type2 == S_INT ), "Expressions not matching type.", AST_GetNodeLine( child ) );
+    }
+    else if( type2 == S_CHAR )
+    {
+        errorTyping( ( type1 == S_CHAR || type1 == S_INT ), "Expressions not matching type.", AST_GetNodeLine( child ) );
+    }
+    else
+    {
+        errorTyping( type1 == type2, "Expressions not matching type.", AST_GetNodeLine( child ) );
+    }
 }
 
 void SYT_VisitCall( SymTable * syt, Ast * ast )
@@ -357,7 +370,7 @@ void SYT_VisitParams( SymTable * syt, Ast * ast )
 
 void SYT_VisitLitString( SymTable * syt, Ast * ast )
 {
-    AST_Annotate( ast, SYM_New( S_STRING, 0 ) );
+    AST_Annotate( ast, SYM_New( S_CHAR, 1 ) );
 }
 
 void SYT_VisitLitInt( SymTable * syt, Ast * ast )
@@ -504,7 +517,20 @@ void SYT_VisitEqual( SymTable * syt, Ast * ast )
     int type2 = SYM_GetType( s2 );
     int ptrType2 = SYM_GetPtrType( s2 );        
     
-    errorTyping( ( type1 == type2 && ptrType1 == ptrType2 ), "Expressions not matching type.", AST_GetNodeLine( child ) );
+    errorTyping( ptrType1 == ptrType2, "Expressions not matching type.", AST_GetNodeLine( child ) );
+    
+    if( type1 == S_CHAR )
+    {
+        errorTyping( ( type2 == S_CHAR || type2 == S_INT ), "Expressions not matching type.", AST_GetNodeLine( child ) );
+    }
+    else if( type2 == S_CHAR )
+    {
+        errorTyping( ( type1 == S_CHAR || type1 == S_INT ), "Expressions not matching type.", AST_GetNodeLine( child ) );
+    }
+    else
+    {
+        errorTyping( type1 == type2, "Expressions not matching type.", AST_GetNodeLine( child ) );
+    }
     
     AST_Annotate( ast, SYM_New( S_BOOL, 0 ) );
 }
@@ -519,7 +545,7 @@ void SYT_VisitComparison( SymTable * syt, Ast * ast )
         int type = SYM_GetType( s );
         int ptrType = SYM_GetPtrType( s );        
         
-        errorTyping( ( type == S_INT && ptrType == 0 ), "Expression does not evaluate to type \'int\'.", AST_GetNodeLine( child ) );        
+        errorTyping( ( ( type == S_INT || type == S_CHAR ) && ptrType == 0 ), "Expression does not evaluate to type \'int\'.", AST_GetNodeLine( child ) );        
     }
     
     AST_Annotate( ast, SYM_New( S_BOOL, 0 ) );
@@ -590,10 +616,10 @@ void SYT_VisitExpression( SymTable * syt, Ast * ast )
             break;
             
         case A_EQ:
+        case A_NEQ:
             SYT_VisitEqual( syt, ast );
             break;
             
-        case A_NEQ:
         case A_LARGER:
         case A_SMALLER:
         case A_LARGEREQ:
@@ -768,5 +794,7 @@ void SYT_Build( SymTable * syt, Ast * ast )
             SYT_ProcessNode( syt, child );
         }
     }
+    
+    fprintf( stdout, "Typing successful!\n" ); 
 }
 

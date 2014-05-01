@@ -601,6 +601,12 @@ char * AST_FindType( Ast * ast, int * outPtr )
                 ( *outPtr )++;
                 child = child->next;
             }
+            
+            if( strcmp( child->value, "string" ) == 0 )
+            {
+                ( *outPtr )++;
+                return "char";
+            }
                 
             return child->value;
         }
