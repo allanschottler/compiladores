@@ -56,7 +56,7 @@ fun main(argc:int, argv:[][]char)
     lol()
 end
 
-/*fun myglobalvar()
+fun myglobalvar()
     
 
-end*/
+end

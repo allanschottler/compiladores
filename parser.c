@@ -745,8 +745,6 @@ void PAR_Execute( Parser * par, List * tokens )
     
     if( LIS_GetSize( par->tokens ) )
         PAR_ExpandProgram( par );
-        
-    AST_Dump( par->ast );
 }
 
 void PAR_DumpTokens( Parser * par )

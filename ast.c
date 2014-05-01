@@ -15,8 +15,7 @@ struct node
 	int type;
 	char * value;
 	int line;
-	int annType;
-	int ptrType;
+	Symbol * annotation;
 	Node * parent;
 	Node * next;
 	Node * prev;
@@ -28,8 +27,7 @@ Node * ASN_New( int type, char * value, int line )
 	Node * node = ( Node* )malloc( sizeof( Node ) );
 	node->type = type;
 	node->line = line;
-	node->annType = 0;
-	node->ptrType = 0;
+	node->annotation = NULL;	
 	node->value = NULL;
 	
 	if( value )	
@@ -87,8 +85,15 @@ void ASN_Delete( Node * node )
 		
 	    if( node->value )
 	        free( node->value );
-	        
+	    
+	    if( node->annotation )
+	    {
+    	    SYM_Delete( node->annotation );
+    	    node->annotation = NULL;
+    	}
+    	        
 	    free( node );
+	    node = NULL;
 	}
 }
 
@@ -238,8 +243,16 @@ char * ASN_ToString( int type )
 void ASN_Dump( Node * node, int depth )
 {
     char * str = ASN_ToString( node->type );
-    printf("%s %s @%d\n", str, node->value, node->line );
+    char * type = SYM_SymbolToString( node->annotation );
+    printf("%s %s @%d ", str, node->value, node->line );
+    
+    if( strcmp( type, "" ) != 0 )
+        printf("of %s", type );
+        
+    printf("\n");
+    
     free( str );
+    free( type );
     
     Node * currChild = node->child;
     
@@ -495,13 +508,16 @@ int AST_GetNodeLine( Ast * ast )
     return ast->root->line;
 }
 
-int AST_GetNodeAnnotation( Ast * ast, int * ptrType )
+Symbol * AST_GetNodeAnnotation( Ast * ast )
 {
-    assert( ast->root->annType != 0 );
+    return ast->root->annotation;
+}
+
+void AST_Annotate( Ast * ast, Symbol * sym )
+{
+    assert( ast->root->annotation == NULL );
     
-    *ptrType = ast->root->ptrType;
-    
-    return ast->root->annType;
+    ast->root->annotation = sym;
 }
 
 Ast * AST_GetChild( Ast * ast )
@@ -568,9 +584,6 @@ char * AST_FindType( Ast * ast, int * outPtr )
 {
     int type = ast->root->type;
     
-    if( type != A_FUNCTION && type != A_DECLVAR )
-        return NULL;
-        
     *outPtr = 0;
     Node * child;
     
@@ -591,11 +604,5 @@ char * AST_FindType( Ast * ast, int * outPtr )
     }
     
     return NULL;
-}
-
-void AST_Annotate( Ast * ast, int type, int ptrType )
-{
-    ast->root->annType = type;
-    ast->root->ptrType = ptrType;
 }
 

@@ -1,7 +1,7 @@
 #ifndef AST_H
 #define AST_H
 
-#include "list.h"
+#include "symbol.h"
 
 /*****************************************************************
 DOCUMENTACAO:
@@ -23,7 +23,7 @@ expressar composição de "terminals" da parte "Expressions".
 #define A_WHILE		3   // EXP BLOCK
 #define A_DECLVAR	4   // ID TYPE
 #define A_ASSIGN	5   // VAR EXP
-#define A_CALL		6   // ID {EXP}
+#define A_CALL		6   // ID ARGS
 #define A_FUNCTION	7   // ID {DECLVAR} [TYPE]
 #define A_RETURN	8   // EXP
 #define A_BLOCK		9   // {DECLVAR} {ASSIGN | CALL | CMD} (CMD sendo IF, WHILE, RETURN)
@@ -73,13 +73,17 @@ int AST_TokenTypeToAst( int tokenType );
 
 void AST_Dump( Ast * ast );
 
+
 int AST_GetNodeType( Ast * ast );
 
 char * AST_GetNodeValue( Ast * ast );
 
 int AST_GetNodeLine( Ast * ast );
 
-int AST_GetNodeAnnotation( Ast * ast, int * ptrType );
+Symbol * AST_GetNodeAnnotation( Ast * ast );
+
+void AST_Annotate( Ast * ast, Symbol * sym );
+
 
 Ast * AST_GetChild( Ast * ast );
 
@@ -88,7 +92,5 @@ Ast * AST_NextSibling( Ast * ast );
 char * AST_FindId( Ast * ast );
 
 char * AST_FindType( Ast * ast, int * outPtr );
-
-void AST_Annotate( Ast * ast, int type, int ptrType );
 
 #endif

@@ -57,11 +57,13 @@ int main( int argc, char * argv[] )
     
     Ast * ast = PAR_GetAst( par );
     SymTable * syt = SYT_New();
-    SYT_Build( syt, ast );
+    SYT_Build( syt, ast );    
+        
+    AST_Dump( ast );
     
     SYT_Delete( syt );
     PAR_Delete( par );    
-    AST_Delete( ast );
+    //AST_Delete( ast );
     
 	return EXIT_SUCCESS;
 }
