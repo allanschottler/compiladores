@@ -47,12 +47,15 @@ static void errorTyping( int assert, const char * error, int line )
     exit( EXIT_FAILURE );
 }
 
+static int scopeIdGen = 1;
+
 typedef struct hash Hash;
 
 struct hash
 {
     char * id;
 	Symbol * symbol;
+	int isGlobal;
 	UT_hash_handle hh;
 };
 
@@ -65,10 +68,11 @@ struct scope
 	int nScopes;
 	int maxScopes;
 	int nSymbols;
+	int id;
 	Hash * symbols;	
 };
 
-Scope * SCO_New()
+Scope * SCO_New( int id )
 {
 	Scope * scope = ( Scope* )malloc( sizeof( Scope ) );
 	scope->parent = NULL;
@@ -77,6 +81,7 @@ Scope * SCO_New()
 	scope->maxScopes = MAX_SCOPES;
 	scope->nSymbols = 0;
 	scope->symbols = NULL;
+	scope->id = id;
 	
 	int i;
 	
@@ -147,7 +152,7 @@ SymTable * SYT_New()
 {
 	SymTable * syt = ( SymTable* )malloc( sizeof( SymTable ) );
 	syt->ast = NULL;
-	syt->root = SCO_New();
+	syt->root = SCO_New( scopeIdGen++ );
 	syt->current = syt->root;
 	
 	return syt;
@@ -161,7 +166,15 @@ void SYT_Delete( SymTable * syt )
 
 void SYT_OpenScope( SymTable * syt )
 {
-	Scope * newScope = SCO_New();
+	Scope * newScope = SCO_New( scopeIdGen++ );
+
+	SCO_AppendScope( syt->current, newScope );
+	syt->current = newScope;
+}
+
+void SYT_OpenFriendScope( SymTable * syt )
+{
+	Scope * newScope = SCO_New( scopeIdGen );
 
 	SCO_AppendScope( syt->current, newScope );
 	syt->current = newScope;
@@ -178,15 +191,16 @@ void SYT_CloseScope( SymTable * syt )
 int SYT_CheckSymbol( SymTable * syt, char * idName, Symbol ** s )
 {
 	Hash * h;
-	Scope * current = syt->current;
-    
+	Scope * current = syt->current;		
+       
     do
-    {
+    {            
         HASH_FIND_STR( current->symbols, idName, h );
         
         if( h )
         {
             *s = h->symbol;
+            SYM_SetScopeId( *s, current->id );
             return SYM_GetType( h->symbol ); 
         }           
         
@@ -202,14 +216,14 @@ int SYT_AddSymbol( SymTable * syt, char * idName, Symbol * s )
     if( !idName )
         return 0;
     
-    Symbol * garbage;
-    int check = SYT_CheckSymbol( syt, idName, &garbage );
+    Symbol * existing;
+    int check = SYT_CheckSymbol( syt, idName, &existing );
     
-    if( !check ) 
+    if( !check || ( check && syt->current->id != SYM_GetScopeId( existing ) ) ) 
     {
 	    Hash * h = ( Hash* )malloc( sizeof( Hash ) );
 	    h->id = idName;
-	    h->symbol = s;
+	    h->symbol = s;	    
 	
 	    HASH_ADD_STR( syt->current->symbols, id, h ); //This works cuz macros
 	    syt->current->nSymbols++;
@@ -226,8 +240,8 @@ void SYT_VisitDeclaration( SymTable * syt, Ast * ast )
     char * name = AST_GetNodeValue( child );
     int ptrType;	                
     int type = SYM_StringToType( AST_FindType( ast, &ptrType ) );
-    Symbol * s = SYM_New( type, ptrType );    
-    
+    Symbol * s = SYM_New( type, ptrType ); 
+        
     if( !SYT_AddSymbol( syt, name, s ) )	                
         errorSymbol( ERROR_REDEFINED, name, AST_GetNodeLine( ast ) );
         
@@ -265,19 +279,26 @@ void SYT_VisitAssign( SymTable * syt, Ast * ast )
     
     free( child );
     
-    errorTyping( ptrType1 == ptrType2, "Expressions not matching type.", AST_GetNodeLine( child ) );
+    errorTyping( ptrType1 == ptrType2, "Expressions not matching type.", AST_GetNodeLine( ast ) );
     
-    if( type1 == S_CHAR )
+    if( ptrType1 == 0 )
     {
-        errorTyping( ( type2 == S_CHAR || type2 == S_INT ), "Expressions not matching type.", AST_GetNodeLine( child ) );
-    }
-    else if( type2 == S_CHAR )
-    {
-        errorTyping( ( type1 == S_CHAR || type1 == S_INT ), "Expressions not matching type.", AST_GetNodeLine( child ) );
+        if( type1 == S_CHAR )
+        {
+            errorTyping( ( type2 == S_CHAR || type2 == S_INT ), "Expressions not matching type.", AST_GetNodeLine( ast ) );
+        }
+        else if( type2 == S_CHAR )
+        {
+            errorTyping( ( type1 == S_CHAR || type1 == S_INT ), "Expressions not matching type.", AST_GetNodeLine( ast ) );
+        }
+        else
+        {
+            errorTyping( type1 == type2, "Expressions not matching type.", AST_GetNodeLine( ast ) );
+        }
     }
     else
     {
-        errorTyping( type1 == type2, "Expressions not matching type.", AST_GetNodeLine( child ) );
+        errorTyping( type1 == type2, "Expressions not matching type.", AST_GetNodeLine( ast ) );
     }
 }
 
@@ -305,7 +326,7 @@ void SYT_VisitCall( SymTable * syt, Ast * ast )
     
     errorTyping( SYM_CompareParams( s1, s2 ), "Expression does not match function parameter type.", AST_GetNodeLine( ast ) );    
     
-    AST_Annotate( ast, SYM_New( type, 0 ) );
+    AST_Annotate( ast, s );
 }
 
 void SYT_VisitIf( SymTable * syt, Ast * ast )
@@ -468,7 +489,7 @@ void SYT_VisitNegative( SymTable * syt, Ast * ast )
     int line = AST_GetNodeLine( child );
     free( child );
     
-    errorTyping( ( type == S_INT && ptrType == 0 ), "Expression does not evaluate to type \'int\'.", line );    
+    errorTyping( ( ( type == S_INT || S_CHAR ) && ptrType == 0 ), "Expression does not evaluate to type \'int\'.", line );    
     
     AST_Annotate( ast, SYM_New( S_INT, 0 ) );
 }
@@ -694,9 +715,30 @@ int SYT_AssertReturns( SymTable * syt, Ast * ast, int type, int ptrType )
 	    {
 	        Symbol * s = AST_GetNodeAnnotation( child );
             int returnType = SYM_GetType( s );
+            printf("ret: %d\n",returnType);
             int returnPtrType = SYM_GetPtrType( s );        
             
-            errorTyping( ( type == returnType && ptrType == returnPtrType ), "Return expression does not evaluate to function return type.", AST_GetNodeLine( child ) );
+            errorTyping( ( ptrType == returnPtrType ), "Return expression does not evaluate to function return type.", AST_GetNodeLine( child ) );
+            
+            if( ptrType == 0 )
+            {
+                if( type == S_CHAR )
+                {
+                    errorTyping( ( returnType == S_CHAR || returnType == S_INT ), "Expressions not matching type.", AST_GetNodeLine( child ) );
+                }
+                else if( returnType == S_CHAR )
+                {
+                    errorTyping( ( type == S_CHAR || type == S_INT ), "Expressions not matching type.", AST_GetNodeLine( child ) );
+                }
+                else
+                {
+                    errorTyping( type == returnType, "Expressions not matching type.", AST_GetNodeLine( child ) );
+                }   
+            }
+            else
+            {
+                errorTyping( type == returnType, "Expressions not matching type.", AST_GetNodeLine( child ) );
+            }        
             
             foundReturn = 1;   
 	    }
@@ -713,6 +755,9 @@ void SYT_ProcessNode( SymTable * syt, Ast * ast )
     switch( AST_GetNodeType( ast ) )
     {
         case A_FUNCTION:
+            SYT_OpenFriendScope( syt );
+            break;
+            
         case A_BLOCK:
             SYT_OpenScope( syt );
             break;
@@ -758,21 +803,15 @@ void SYT_ProcessNode( SymTable * syt, Ast * ast )
 	        SYT_ProcessNode( syt, child );
 	}	
 	
+	// Assert return of function
 	if( AST_GetNodeType( ast ) == A_FUNCTION )
 	{
 	    SYT_CloseScope( syt );
 	    
 	    Symbol * s;
-	    int type = SYT_CheckSymbol( syt, AST_FindId( ast ), &s );     
+	    int type = SYT_CheckSymbol( syt, AST_FindId( ast ), &s );
+	    int hasReturn = SYT_AssertReturns( syt, ast, type, SYM_GetPtrType( s ) );
 	    
-	    if( type != S_VOID )
-	    {
-	        errorTyping( SYT_AssertReturns( syt, ast, type, SYM_GetPtrType( s ) ), "No return expression for function", AST_GetNodeLine( ast ) );
-	    }
-	    else
-	    {
-	        int hasReturn = SYT_AssertReturns( syt, ast, type, SYM_GetPtrType( s ) ); //optional
-	    }
 	}
 	    
 	if( AST_GetNodeType( ast ) == A_BLOCK )

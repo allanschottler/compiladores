@@ -25,7 +25,12 @@ int main( int argc, char * argv[] )
 	Lexer * lex = LEX_New();
 	List * tokens = LIS_New();	
 	
-	freopen( argv[1], "r", stdin );
+	FILE* fp = freopen( argv[1], "r", stdin );
+	if( !fp )
+	{
+	    printf( "File doesn't exist.\n" );
+		return EXIT_FAILURE;
+	}
 	
     for( ;; ) 
     {
@@ -57,7 +62,7 @@ int main( int argc, char * argv[] )
     
     Ast * ast = PAR_GetAst( par );
     SymTable * syt = SYT_New();
-    SYT_Build( syt, ast );    
+    SYT_Build( syt, ast );
         
     AST_Dump( ast );
     

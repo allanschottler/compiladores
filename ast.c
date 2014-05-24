@@ -242,6 +242,8 @@ char * ASN_ToString( int type )
 
 void ASN_Dump( Node * node, int depth )
 {
+    assert( node != NULL );    
+    
     char * str = ASN_ToString( node->type );
     char * type = SYM_SymbolToString( node->annotation );
     printf( "%s ", str );
@@ -258,7 +260,7 @@ void ASN_Dump( Node * node, int depth )
     free( type );
     
     Node * currChild = node->child;
-    
+        
     if( currChild )
     {
         do

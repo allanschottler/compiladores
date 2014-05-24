@@ -27,4 +27,8 @@ int SYM_GetType( Symbol * sym );
 
 int SYM_GetPtrType( Symbol * sym );
 
+int SYM_GetScopeId( Symbol * sym );
+
+void SYM_SetScopeId( Symbol * sym, int id );
+
 #endif

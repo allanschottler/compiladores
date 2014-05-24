@@ -13,6 +13,7 @@ struct symbol
 	int * paramsType;
 	int * paramsPtrType;
 	int nParams;
+	int scopeId;
 };
 
 Symbol * SYM_New( int type, int ptrType )
@@ -24,6 +25,7 @@ Symbol * SYM_New( int type, int ptrType )
     s->paramsType = NULL;
     s->paramsPtrType = NULL;
     s->nParams = 0;
+    s->scopeId = 0;
     
     return s;
 }
@@ -159,4 +161,14 @@ int SYM_GetType( Symbol * sym )
 int SYM_GetPtrType( Symbol * sym )
 {
     return sym->ptrType;
+}
+
+int SYM_GetScopeId( Symbol * sym )
+{
+    return sym->scopeId;
+}
+
+void SYM_SetScopeId( Symbol * sym, int id )
+{
+    sym->scopeId = id;
 }
