@@ -714,8 +714,7 @@ int SYT_AssertReturns( SymTable * syt, Ast * ast, int type, int ptrType )
 	    if( AST_GetNodeType( child ) == A_RETURN )
 	    {
 	        Symbol * s = AST_GetNodeAnnotation( child );
-            int returnType = SYM_GetType( s );
-            printf("ret: %d\n",returnType);
+            int returnType = SYM_GetType( s );            
             int returnPtrType = SYM_GetPtrType( s );        
             
             errorTyping( ( ptrType == returnPtrType ), "Return expression does not evaluate to function return type.", AST_GetNodeLine( child ) );

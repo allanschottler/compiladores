@@ -70,9 +70,21 @@ void ETR_Dump( void * entry )
     {
         printf( "goto %s\n", e->value1 );
     }
+    else if( e->operation == O_PARM )
+    {
+        printf( "param %s\n", e->value1 );
+    }
+    else if( e->operation == O_ARG )
+    {
+        printf( "arg %s\n", e->value1 );
+    }
     else if( e->operation == O_RET )
     {
-        printf( "ret\n" );
+        printf( "ret %s\n", e->value1 );
+    }
+    else if( e->operation == O_NEW )
+    {
+        printf( "%s = %s times %s\n", e->result, e->value2, e->value1 );
     }
     else if( e->operation != O_LABL )
     {
@@ -132,6 +144,7 @@ struct icr
 /*************************************************************/
 
 void ICR_GenerateBlock( Icr * icr, Ast * ast );
+void ICR_GenerateCall( Icr * icr, Ast * ast );
 
 static int tempUniqueId = 0;
 static int labelUniqueId = 0;
@@ -247,20 +260,56 @@ char * ICR_GenerateExpression( Icr * icr, Ast * ast )
             break;
             
         case A_NEW:
-            // TODO
+        {
+            Ast * child = AST_GetChild( ast );            
+            char * temp = generateTemp();
+            char * e = ICR_GenerateExpression( icr, child );
+            free( child );
+            LIS_PushBack( icr->entries, ETR_New( O_NEW, "0", e, temp ) );
+            
+            return temp;
+        }
             break;
         
 	    case A_VAR:
-	        // TODO
+	    {
+	        char * id;
+	        
+	        Ast * child;
+            for( child = AST_GetChild( ast ); child; child = AST_NextSibling( child ) )
+	        {
+	            int type = AST_GetNodeType( child );
+	            if( type == A_ID )
+	            {
+	                id = AST_GetNodeValue( child );
+	            }
+	            else
+	            {
+	                char * exp = ICR_GenerateExpression( icr, child );
+	                char * temp = generateTemp();
+	                
+	                LIS_PushBack( icr->entries, ETR_New( O_ADD, id, exp, temp ) );
+	                id = temp;
+	            }
+	        }
+	        
+	        return id;
+	    }
 	        break;
 	        
 	    case A_CALL:
+	    {
+	        char * id = AST_FindId( ast );
+	        ICR_GenerateCall( icr, ast );
+	        char * temp = generateTemp();
+	        LIS_PushBack( icr->entries, ETR_New( O_ASGN, id, NULL, temp ) );
+	        
+	        return temp;
+	    }
 	        break;
 	            
         case A_LITINT:
-        case A_LITSTRING:
-        case A_TRUE:
-        case A_FALSE:
+        case A_LITSTRING:        
         {
             char * e = malloc( 20 );
             e = strdup( AST_GetNodeValue( ast ) );
@@ -268,7 +317,26 @@ char * ICR_GenerateExpression( Icr * icr, Ast * ast )
             return e;
         }
             break;
+          
+        case A_TRUE:
+        {
+            char * e = malloc( 6 );            
+            sprintf( e, "true" );
             
+            return e;
+        }
+            break;
+            
+        case A_FALSE:
+        {
+            char * e = malloc( 6 );            
+            sprintf( e, "false" );
+            
+            return e;
+        }
+            break;
+            
+            break;    
         default:
             assert( 0 );
 	}
@@ -276,10 +344,41 @@ char * ICR_GenerateExpression( Icr * icr, Ast * ast )
 	return NULL;
 }
 
-void ICR_GenerateCall( Icr * icr, Ast * ast )
+void ICR_GenerateParams( Icr * icr, Ast * ast )
 {
+    Ast * child;
+    for( child = AST_GetChild( ast ); child; child = AST_NextSibling( child ) )
+	{
+	    char * exp = ICR_GenerateExpression( icr, child );
+	    LIS_PushBack( icr->entries, ETR_New( O_PARM, exp, NULL, NULL ) );
+	}
+}
+
+void ICR_GenerateCall( Icr * icr, Ast * ast )
+{    
     char * id = AST_FindId( ast );
+    Ast * child = AST_GetChild( ast );
+    child = AST_NextSibling( child );
+    ICR_GenerateParams( icr, child );
+    free( child );
     LIS_PushBack( icr->entries, ETR_New( O_CALL, id, NULL, NULL ) );
+}
+
+void ICR_GenerateReturn( Icr * icr, Ast * ast )
+{    
+    Ast * child = AST_GetChild( ast );
+    
+    if( child )
+    {
+        char * exp = ICR_GenerateExpression( icr, child );
+        LIS_PushBack( icr->entries, ETR_New( O_RET, exp, NULL, NULL ) );
+    }
+    else
+    {
+        LIS_PushBack( icr->entries, ETR_New( O_RET, NULL, NULL, NULL ) );
+    }
+    
+    free( child );
 }
 
 void ICR_GenerateAssign( Icr * icr, Ast * ast )
@@ -392,6 +491,7 @@ void ICR_GenerateBlock( Icr * icr, Ast * ast )
 	            break;
 	            
 	        case A_RETURN:
+	            ICR_GenerateReturn( icr, child );
 	            break;
 	            
 	        default:
@@ -402,20 +502,33 @@ void ICR_GenerateBlock( Icr * icr, Ast * ast )
 	}
 }
 
+void ICR_GenerateArgs( Icr * icr, Ast * ast )
+{
+    Ast * child;    
+    for( child = AST_GetChild( ast ); child; child = AST_NextSibling( child ) )
+	{
+	    char * id = AST_FindId( child );
+	    LIS_PushBack( icr->entries, ETR_New( O_ARG, id, NULL, NULL ) );
+	}
+}
+
 void ICR_GenerateFunction( Icr * icr, Ast * ast )
 {
-    // Fun setup
     char * id = AST_FindId( ast );
     LIS_PushBack( icr->entries, ETR_New( O_LABL, id, NULL, NULL ) );
     
     Ast * child;    
     for( child = AST_GetChild( ast ); child; child = AST_NextSibling( child ) )
 	{
-	    if( AST_GetNodeType( child ) == A_BLOCK )
+	    int type = AST_GetNodeType( child );
+	    
+	    if( type == A_PARAMS )
+	        ICR_GenerateArgs( icr, child );
+	        	        
+	    else if( type == A_BLOCK )
             ICR_GenerateBlock( icr, child ); 
-    }
-    
-    // Pushes
+    }    
+   
     LIS_PushBack( icr->entries, ETR_New( O_RET, NULL, NULL, NULL ) );
 }
 
