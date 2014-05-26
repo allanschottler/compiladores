@@ -5,6 +5,7 @@
 #include "parser.h"
 #include "ast.h"
 #include "symtable.h"
+#include "icr.h"
 
 
 void errorLexer( Token * tok )
@@ -58,17 +59,19 @@ int main( int argc, char * argv[] )
     LEX_Delete( lex );
     
     Parser * par = PAR_New();    
-    PAR_Execute( par, tokens );
-    
+    PAR_Execute( par, tokens );   
     Ast * ast = PAR_GetAst( par );
+    PAR_Delete( par );    
+    
     SymTable * syt = SYT_New();
     SYT_Build( syt, ast );
-        
-    AST_Dump( ast );
-    
     SYT_Delete( syt );
-    PAR_Delete( par );    
-    //AST_Delete( ast );
+    
+    AST_Dump( ast );
+        
+    Icr * icr = ICR_New();    
+    ICR_Build( icr, ast ); 
+    ICR_Dump( icr );   
     
 	return EXIT_SUCCESS;
 }
