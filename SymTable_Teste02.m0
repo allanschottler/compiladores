@@ -21,9 +21,9 @@ fun main(argc:int, argv:[]string)
      
 end
 
-fun print(a:string)
+fun print(a:string):bool
 
-
+    return true
 end
 
 fun lol(a:int, b:bool, b2:bool, a2:string, c:char):int
@@ -32,6 +32,9 @@ end
 
 fun isTrue(b:bool,a:int)
     
+    c:bool
+    b = true or false
+    c = b and print("this")
     if a = 1
         return
     else if a = 2

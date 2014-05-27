@@ -44,9 +44,6 @@ void ETR_Dump( void * entry )
 {
     static int wasLastArg = 0;
     Entry * e = ( Entry* )entry;
-    
-    if( wasLastArg && e->operation != O_ARG )
-        printf( ")\n" );
         
     if( e->operation == O_LABL )
         printf( "%s:\n", e->value1 );
@@ -78,11 +75,7 @@ void ETR_Dump( void * entry )
     else if( e->operation == O_PARM )
     {
         printf( "param %s\n", e->value1 );
-    }
-    else if( e->operation == O_ARG )
-    {
-        printf( "%s,", e->value1 );
-    }
+    }    
     else if( e->operation == O_RET )
     {
         if( e->value1 )
@@ -100,7 +93,7 @@ void ETR_Dump( void * entry )
     } 
     else if( e->operation == O_FUN )
     {
-        printf( "fun %s (", e->value1 );
+        printf( "fun %s(%s)\n", e->value1, e->value2 );
     } 
     else if( e->operation == O_ARRAY )
     {
@@ -153,12 +146,7 @@ void ETR_Dump( void * entry )
                 assert( 0 );
         }
         printf( "%s = %s %s %s\n", e->result, e->value1, str, e->value2 );
-    }    
-        
-    if( e->operation == O_ARG )
-        wasLastArg = 1;
-    else
-        wasLastArg = 0;
+    }
 }
 
 struct icr
@@ -173,6 +161,7 @@ void ICR_GenerateCall( Icr * icr, Ast * ast );
 
 static int tempUniqueId = 0;
 static int labelUniqueId = 0;
+static char retId[] = "$ret";
 
 static char * generateTemp()
 {
@@ -239,8 +228,6 @@ char * ICR_GenerateExpression( Icr * icr, Ast * ast )
         case A_SMALLER:
         case A_LARGEREQ:
         case A_SMALLEREQ:
-        case A_AND:
-        case A_OR:
         {
             char * temp = generateTemp();
             
@@ -255,6 +242,58 @@ char * ICR_GenerateExpression( Icr * icr, Ast * ast )
             
             free( child );
             return temp;            
+        }
+            break;
+            
+        case A_AND:
+        {
+            char * temp = generateTemp();
+            char * label = generateLabel();
+            char * endLabel = generateLabel();
+            
+            child = AST_GetChild( ast );
+            char * e1 = ICR_GenerateExpression( icr, child );
+            
+            LIS_PushBack( icr->entries, ETR_New( O_IFF, e1, NULL, label ) );
+            
+            child = AST_NextSibling( child );
+            char * e2 = ICR_GenerateExpression( icr, child );
+            LIS_PushBack( icr->entries, ETR_New( O_ASGN, e2, NULL, temp ) );
+            LIS_PushBack( icr->entries, ETR_New( O_GOTO, endLabel, NULL, NULL ) );
+            
+            LIS_PushBack( icr->entries, ETR_New( O_LABL, label, NULL, NULL ) );
+            LIS_PushBack( icr->entries, ETR_New( O_ASGN, e1, NULL, temp ) );
+            
+            LIS_PushBack( icr->entries, ETR_New( O_LABL, endLabel, NULL, NULL ) );
+            
+            free( child );
+            return temp;  
+        }
+            break;
+            
+        case A_OR:
+        {
+            char * temp = generateTemp();
+            char * label = generateLabel();
+            char * endLabel = generateLabel();
+            
+            child = AST_GetChild( ast );
+            char * e1 = ICR_GenerateExpression( icr, child );
+            
+            LIS_PushBack( icr->entries, ETR_New( O_IFT, e1, NULL, label ) );
+            
+            child = AST_NextSibling( child );
+            char * e2 = ICR_GenerateExpression( icr, child );
+            LIS_PushBack( icr->entries, ETR_New( O_ASGN, e2, NULL, temp ) );
+            LIS_PushBack( icr->entries, ETR_New( O_GOTO, endLabel, NULL, NULL ) );
+            
+            LIS_PushBack( icr->entries, ETR_New( O_LABL, label, NULL, NULL ) );
+            LIS_PushBack( icr->entries, ETR_New( O_ASGN, e1, NULL, temp ) );
+            
+            LIS_PushBack( icr->entries, ETR_New( O_LABL, endLabel, NULL, NULL ) );
+            
+            free( child );
+            return temp;  
         }
             break;
         
@@ -327,7 +366,7 @@ char * ICR_GenerateExpression( Icr * icr, Ast * ast )
 	        char * id = AST_FindId( ast );
 	        ICR_GenerateCall( icr, ast );
 	        char * temp = generateTemp();
-	        LIS_PushBack( icr->entries, ETR_New( O_ASGN, id, NULL, temp ) );
+	        LIS_PushBack( icr->entries, ETR_New( O_ASGN, retId, NULL, temp ) );
 	        
 	        return temp;
 	    }
@@ -345,19 +384,13 @@ char * ICR_GenerateExpression( Icr * icr, Ast * ast )
           
         case A_TRUE:
         {
-            char * e = malloc( 6 );            
-            sprintf( e, "true" );
-            
-            return e;
+            return "1";
         }
             break;
             
         case A_FALSE:
         {
-            char * e = malloc( 6 );            
-            sprintf( e, "false" );
-            
-            return e;
+            return "0";
         }
             break;
             
@@ -527,20 +560,30 @@ void ICR_GenerateBlock( Icr * icr, Ast * ast )
 	}
 }
 
-void ICR_GenerateArgs( Icr * icr, Ast * ast )
+char * ICR_GenerateArgs( Icr * icr, Ast * ast )
 {
+    char * str = malloc( 64 );
+    strcpy( str, "" );
+    int firstLoop = 1;
     Ast * child;    
     for( child = AST_GetChild( ast ); child; child = AST_NextSibling( child ) )
 	{
 	    char * id = AST_FindId( child );
-	    LIS_PushBack( icr->entries, ETR_New( O_ARG, id, NULL, NULL ) );
+	    if( !firstLoop )
+    	    strcat( str, "," );
+    	    
+    	strcat( str, id );
+    	
+    	firstLoop = 0;
 	}
+	
+	return str;
 }
 
 void ICR_GenerateFunction( Icr * icr, Ast * ast )
 {
     char * id = AST_FindId( ast );
-    LIS_PushBack( icr->entries, ETR_New( O_FUN, id, NULL, NULL ) );
+    char * args;    
     
     Ast * child;    
     for( child = AST_GetChild( ast ); child; child = AST_NextSibling( child ) )
@@ -548,7 +591,10 @@ void ICR_GenerateFunction( Icr * icr, Ast * ast )
 	    int type = AST_GetNodeType( child );
 	    
 	    if( type == A_PARAMS )
-	        ICR_GenerateArgs( icr, child );
+	    {
+	        args = ICR_GenerateArgs( icr, child );
+	        LIS_PushBack( icr->entries, ETR_New( O_FUN, id, args, NULL ) );
+	    }
 	        	        
 	    else if( type == A_BLOCK )
             ICR_GenerateBlock( icr, child ); 
