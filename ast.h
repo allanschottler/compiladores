@@ -84,6 +84,8 @@ Symbol * AST_GetNodeAnnotation( Ast * ast );
 
 void AST_Annotate( Ast * ast, Symbol * sym );
 
+int AST_HasNext( Ast * ast );
+
 
 Ast * AST_GetChild( Ast * ast );
 

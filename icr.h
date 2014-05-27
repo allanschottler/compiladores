@@ -16,20 +16,20 @@
 #define O_SMLR  10
 #define O_LRGRE 11
 #define O_SMLRE 12
-#define O_AND   13
-#define O_OR    14
-#define O_NOT   15  
+//#define O_AND   13
+//#define O_OR    14
 
-#define O_ASGN  16
-#define O_CALL  17
-#define O_GOTO  18
-#define O_LABL  19
-#define O_PARM  20
-#define O_ARG   21
-#define O_RET   22
-#define O_NEW   23
-#define O_FUN   24
-#define O_ARRAY 25
+
+#define O_ASGN  13
+#define O_CALL  14
+#define O_GOTO  15
+#define O_LABL  16
+#define O_PARM  17
+//#define O_ARG   21
+#define O_RET   18
+#define O_NEW   19
+#define O_FUN   20
+//#define O_ARRAY 25
 
 // Intermediate Code Representation
 typedef struct icr Icr;

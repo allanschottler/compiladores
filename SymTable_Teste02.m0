@@ -11,13 +11,15 @@ fun main(argc:int, argv:[]string)
     argv = new[10]string
     isTrue(true,1)
     
-    s = argv[i2]
+    c = argv[i2][1+4+i2]
     while i2>2
     
         s=argv[i2]
         i2=i2+1
     
     loop
+    
+    argv[1][2] = 2
      
 end
 

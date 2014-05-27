@@ -542,6 +542,11 @@ Ast * AST_GetChild( Ast * ast )
 	return child;
 }
 
+int AST_HasNext( Ast * ast )
+{
+    return ( ast->root->next != NULL );
+}
+
 Ast * AST_NextSibling( Ast * ast )
 {
 	if( !ast )
