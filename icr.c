@@ -20,12 +20,11 @@ struct entry
 Entry * ETR_New( int op, char * v1, char * v2, char * result )//, char * label )
 {
     Entry * entry = ( Entry* )malloc( sizeof( Entry ) );
-    
+            
     entry->operation = op;
     entry->value1 = v1 ? strdup( v1 ) : v1;
     entry->value2 = v2 ? strdup( v2 ) : v2;    
-    entry->result = result ? strdup( result ) : result; 
-    //entry->label = strdup( label );       
+    entry->result = result ? strdup( result ) : result;          
     
     return entry;     
 }
@@ -37,16 +36,22 @@ void ETR_Delete( void * entry )
     free( e->value1 );
     free( e->value2 );
     free( e->result );  
-    //free( e->label );
+    
     free( e );          
 }
 
 void ETR_Dump( void * entry )
 {
+    static int wasLastArg = 0;
     Entry * e = ( Entry* )entry;
     
+    if( wasLastArg && e->operation != O_ARG )
+        printf( ")\n" );
+        
     if( e->operation == O_LABL )
         printf( "%s:\n", e->value1 );
+    else if( e->operation == O_FUN )
+        ;
     else    
         printf( "\t" );
     
@@ -56,7 +61,7 @@ void ETR_Dump( void * entry )
     }
     else if( e->operation == O_IFT )
     {
-        printf( "ifTrue %s goto %s\n", e->value1, e->result );    
+        printf( "if %s goto %s\n", e->value1, e->result );    
     }
     else if( e->operation == O_ASGN )
     {
@@ -76,20 +81,31 @@ void ETR_Dump( void * entry )
     }
     else if( e->operation == O_ARG )
     {
-        printf( "arg %s\n", e->value1 );
+        printf( "%s,", e->value1 );
     }
     else if( e->operation == O_RET )
     {
-        printf( "ret %s\n", e->value1 );
+        if( e->value1 )
+            printf( "ret %s\n", e->value1 );
+        else
+            printf( "ret\n" );
     }
     else if( e->operation == O_NEW )
     {
-        printf( "%s = %s times %s\n", e->result, e->value2, e->value1 );
+        printf( "%s = new %s\n", e->result, e->value1 );
     }
     else if( e->operation == O_NOT )
     {
         printf( "not %s\n", e->value1 );
-    }    
+    } 
+    else if( e->operation == O_FUN )
+    {
+        printf( "fun %s (", e->value1 );
+    } 
+    else if( e->operation == O_ARRAY )
+    {
+        printf( "%s = %s[%s]\n", e->result, e->value1, e->value2 );
+    }  
     else if( e->operation != O_LABL )
     {
         char * str = malloc( 4 );
@@ -109,7 +125,7 @@ void ETR_Dump( void * entry )
                 sprintf( str, "*" );
 	            break;                
             case O_EQ:
-                sprintf( str, "=" );
+                sprintf( str, "==" );
 	            break;                
             case O_NEQ:
                 sprintf( str, "<>" );
@@ -137,7 +153,12 @@ void ETR_Dump( void * entry )
                 assert( 0 );
         }
         printf( "%s = %s %s %s\n", e->result, e->value1, str, e->value2 );
-    }
+    }    
+        
+    if( e->operation == O_ARG )
+        wasLastArg = 1;
+    else
+        wasLastArg = 0;
 }
 
 struct icr
@@ -163,7 +184,7 @@ static char * generateTemp()
 static char * generateLabel()
 {
     char * str = malloc( 10 );    
-    sprintf( str, "L%d", labelUniqueId++ );
+    sprintf( str, ".L%d", labelUniqueId++ );
     return str;
 }
 
@@ -269,7 +290,7 @@ char * ICR_GenerateExpression( Icr * icr, Ast * ast )
             char * temp = generateTemp();
             char * e = ICR_GenerateExpression( icr, child );
             free( child );
-            LIS_PushBack( icr->entries, ETR_New( O_NEW, "0", e, temp ) );
+            LIS_PushBack( icr->entries, ETR_New( O_NEW, e, NULL, temp ) );
             
             return temp;
         }
@@ -292,7 +313,7 @@ char * ICR_GenerateExpression( Icr * icr, Ast * ast )
 	                char * exp = ICR_GenerateExpression( icr, child );
 	                char * temp = generateTemp();
 	                
-	                LIS_PushBack( icr->entries, ETR_New( O_ADD, id, exp, temp ) );
+	                LIS_PushBack( icr->entries, ETR_New( O_ARRAY, id, exp, temp ) );
 	                id = temp;
 	            }
 	        }
@@ -519,7 +540,7 @@ void ICR_GenerateArgs( Icr * icr, Ast * ast )
 void ICR_GenerateFunction( Icr * icr, Ast * ast )
 {
     char * id = AST_FindId( ast );
-    LIS_PushBack( icr->entries, ETR_New( O_LABL, id, NULL, NULL ) );
+    LIS_PushBack( icr->entries, ETR_New( O_FUN, id, NULL, NULL ) );
     
     Ast * child;    
     for( child = AST_GetChild( ast ); child; child = AST_NextSibling( child ) )

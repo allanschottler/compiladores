@@ -212,7 +212,7 @@ Token * LEX_NextToken( Lexer * lex )
         if( ch == '"' ) 
         {
             ch = LEX_Get( lex );
-            LEX_AddToBuffer( lex, ch );
+            //LEX_AddToBuffer( lex, ch );
             
             for( ;; ) 
             {
@@ -241,7 +241,7 @@ Token * LEX_NextToken( Lexer * lex )
                 } 
                 else if( ch == '"' ) 
                 {
-                    LEX_AddToBuffer( lex, ch );
+                    //LEX_AddToBuffer( lex, ch );
                     return LEX_AllocToken( lex, T_LITSTRING );
                 } 
                 else if( ch == '\n' ) 

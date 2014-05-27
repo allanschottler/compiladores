@@ -28,6 +28,8 @@
 #define O_ARG   21
 #define O_RET   22
 #define O_NEW   23
+#define O_FUN   24
+#define O_ARRAY 25
 
 // Intermediate Code Representation
 typedef struct icr Icr;
