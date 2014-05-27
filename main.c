@@ -70,8 +70,11 @@ int main( int argc, char * argv[] )
     AST_Dump( ast );
         
     Icr * icr = ICR_New();    
-    ICR_Build( icr, ast ); 
-    ICR_Dump( icr );   
+    ICR_Build( icr, ast );
+    
+    char path[64];
+    sprintf( path, "%s.ic", argv[1] ); 
+    ICR_WriteToFile( icr, path );   
     
 	return EXIT_SUCCESS;
 }

@@ -41,4 +41,6 @@ void ICR_Build( Icr * icr, Ast * ast );
 
 void ICR_Dump( Icr * icr );
 
+void ICR_WriteToFile( Icr * icr, char * path );
+
 #endif

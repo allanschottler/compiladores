@@ -86,6 +86,10 @@ void ETR_Dump( void * entry )
     {
         printf( "%s = %s times %s\n", e->result, e->value2, e->value1 );
     }
+    else if( e->operation == O_NOT )
+    {
+        printf( "not %s\n", e->value1 );
+    }    
     else if( e->operation != O_LABL )
     {
         char * str = malloc( 4 );
@@ -127,7 +131,7 @@ void ETR_Dump( void * entry )
 	            break;                
             case O_OR:
                 sprintf( str, "or" );
-	            break;                
+	            break;               
             default:
                 printf( "wut: %d\n", e->operation );                
                 assert( 0 );
@@ -572,10 +576,24 @@ void ICR_Build( Icr * icr, Ast * ast )
         {
             ICR_GenerateFunction( icr, child );
         }
-	}    
+	}   
+	
+	printf( "Generated intermediate code!\n" ); 
 }
 
 void ICR_Dump( Icr * icr )
 {
     LIS_Dump( icr->entries, &ETR_Dump );
+}
+
+void ICR_WriteToFile( Icr * icr, char * path )
+{
+    FILE * fp = freopen( path, "w", stdout );
+    if( !fp )
+    {
+        exit( EXIT_FAILURE );
+    }
+    
+    ICR_Dump( icr );
+    fclose( stdout );
 }
