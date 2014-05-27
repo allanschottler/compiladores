@@ -14,7 +14,7 @@ fun main(argc:int, argv:[]string)
     c = argv[i2][1+4+i2]
     while i2>2
     
-        s=argv[i2]
+        c=argv[i2][1]
         i2=i2+1
     
     loop

@@ -5,6 +5,7 @@
 
 #include "icr.h"
 #include "list.h"
+#include "symbol.h"
 
 typedef struct entry Entry;
 
@@ -251,11 +252,18 @@ char * ICR_GenerateExpression( Icr * icr, Ast * ast )
             
             LIS_PushBack( icr->entries, ETR_New( O_IFF, e1, NULL, label ) );
             
-            LIS_PushBack( icr->entries, ETR_New( O_ASGN, e2, NULL, temp ) );
+            char * e1b = malloc( 64 );
+            strcpy( e1b, "" );
+            sprintf( e1b, "byte %s", e1 );
+            char * e2b = malloc( 64 );
+            strcpy( e2b, "" );            
+            sprintf( e2b, "byte %s", e2 );
+            
+            LIS_PushBack( icr->entries, ETR_New( O_ASGN, e2b, NULL, temp ) );
             LIS_PushBack( icr->entries, ETR_New( O_GOTO, endLabel, NULL, NULL ) );
             
             LIS_PushBack( icr->entries, ETR_New( O_LABL, label, NULL, NULL ) );
-            LIS_PushBack( icr->entries, ETR_New( O_ASGN, e1, NULL, temp ) );
+            LIS_PushBack( icr->entries, ETR_New( O_ASGN, e1b, NULL, temp ) );
             
             LIS_PushBack( icr->entries, ETR_New( O_LABL, endLabel, NULL, NULL ) );
             
@@ -278,11 +286,18 @@ char * ICR_GenerateExpression( Icr * icr, Ast * ast )
             
             LIS_PushBack( icr->entries, ETR_New( O_IFT, e1, NULL, label ) );
             
-            LIS_PushBack( icr->entries, ETR_New( O_ASGN, e2, NULL, temp ) );
+            char * e1b = malloc( 64 );
+            strcpy( e1b, "" );
+            sprintf( e1b, "byte %s", e1 );
+            char * e2b = malloc( 64 );
+            strcpy( e2b, "" );            
+            sprintf( e2b, "byte %s", e2 );
+            
+            LIS_PushBack( icr->entries, ETR_New( O_ASGN, e2b, NULL, temp ) );
             LIS_PushBack( icr->entries, ETR_New( O_GOTO, endLabel, NULL, NULL ) );
             
             LIS_PushBack( icr->entries, ETR_New( O_LABL, label, NULL, NULL ) );
-            LIS_PushBack( icr->entries, ETR_New( O_ASGN, e1, NULL, temp ) );
+            LIS_PushBack( icr->entries, ETR_New( O_ASGN, e1b, NULL, temp ) );
             
             LIS_PushBack( icr->entries, ETR_New( O_LABL, endLabel, NULL, NULL ) );
             
@@ -339,27 +354,7 @@ char * ICR_GenerateExpression( Icr * icr, Ast * ast )
             break;
         
 	    case A_VAR:
-	    {
-	        /*char * id;
-	        
-	        Ast * child;
-            for( child = AST_GetChild( ast ); child; child = AST_NextSibling( child ) )
-	        {
-	            int type = AST_GetNodeType( child );
-	            if( type == A_ID )
-	            {
-	                id = AST_GetNodeValue( child );
-	            }
-	            else
-	            {
-	                char * exp = ICR_GenerateExpression( icr, child );
-	                char * temp = generateTemp();
-	                
-	                LIS_PushBack( icr->entries, ETR_New( O_ARRAY, id, exp, temp ) );
-	                id = temp;
-	            }
-	        }*/	        
-	        
+	    {        
 	        return ICR_GenerateVar( icr, ast );
 	    }
 	        break;
@@ -486,7 +481,13 @@ void ICR_GenerateAssign( Icr * icr, Ast * ast )
     char * var = ICR_GenerateVar( icr, child );
     
     child = AST_NextSibling( child );
-    char * exp = ICR_GenerateExpression( icr, child );
+    char * exp = malloc( 64 );    
+    strcpy( exp, "" );
+    
+    if( SYM_GetPtrType( AST_GetNodeAnnotation( child ) ) == 0 )
+        strcat( exp, "byte " );
+        
+    strcat( exp, ICR_GenerateExpression( icr, child ) );
     
     LIS_PushBack( icr->entries, ETR_New( O_ASGN, exp, NULL, var ) );
     free( child );    
@@ -558,7 +559,7 @@ void ICR_GenerateIf( Icr * icr, Ast * ast )
 void ICR_GenerateDeclaration( Icr * icr, Ast * ast )
 {
     char * id = AST_FindId( ast );
-    LIS_PushBack( icr->entries, ETR_New( O_ASGN, "0", NULL, id ) );
+    LIS_PushBack( icr->entries, ETR_New( O_ASGN, "byte 0", NULL, id ) );
 }
 
 void ICR_GenerateBlock( Icr * icr, Ast * ast )
