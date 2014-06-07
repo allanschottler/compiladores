@@ -177,6 +177,8 @@ Variable* Variable_new(char* name);
 Instr* Instr_new(Opcode op, ...);
 #define Instr_link(e, l) ((Instr*)List_link((List*)(e), (List*)(l)))
 
+void Instr_dump(Instr* ins, FILE* fd);
+
 Addr Addr_litNum(int num);
 Addr Addr_label(char* label);
 Addr Addr_function(char* name);

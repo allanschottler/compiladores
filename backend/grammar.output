@@ -7,49 +7,49 @@ Grammar
 
     0 $accept: program $end
 
-    1 $@1: /* empty */
+    1 $@1: %empty
 
-    2 $@2: /* empty */
+    2 $@2: %empty
 
     3 program: opt_nl strings $@1 globals $@2 functions
 
     4 strings: string strings
-    5        | /* empty */
+    5        | %empty
 
     6 globals: global globals
-    7        | /* empty */
+    7        | %empty
 
-    8 $@3: /* empty */
+    8 $@3: %empty
 
     9 functions: function $@3 functions
-   10          | /* empty */
+   10          | %empty
 
    11 nl: NL opt_nl
 
    12 opt_nl: NL opt_nl
-   13       | /* empty */
+   13       | %empty
 
    14 string: STRING ID '=' LITSTRING nl
 
    15 global: GLOBAL ID nl
 
-   16 $@4: /* empty */
+   16 $@4: %empty
 
    17 function: FUN ID '(' args ')' nl $@4 commands
 
    18 args: arg more_args
-   19     | /* empty */
+   19     | %empty
 
    20 more_args: ',' args
-   21          | /* empty */
+   21          | %empty
 
    22 arg: ID
 
    23 commands: label command nl commands
-   24         | /* empty */
+   24         | %empty
 
    25 label: LABEL ':' opt_nl label
-   26      | /* empty */
+   26      | %empty
 
    27 id: ID
 
@@ -89,7 +89,7 @@ Grammar
    57 call: params CALL ID
 
    58 params: param nl params
-   59       | /* empty */
+   59       | %empty
 
    60 param: PARAM rval
 

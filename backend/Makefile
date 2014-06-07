@@ -3,7 +3,7 @@ CC=gcc
 CFLAGS=-std=c99 -D_GNU_SOURCE -g -Wall -Werror
 
 PROGRAM=backend
-OBJECTS=main.o ir.o
+OBJECTS=main.o ir.o assembler.o
 
 all: $(PROGRAM)
 
@@ -21,6 +21,9 @@ main.o: main.c
 
 ir.o: ir.c
 	$(CC) $(CFLAGS) -c ir.c
+	
+assembler.o: assembler.c
+	$(CC) $(CFLAGS) -c assembler.c	
 
 cov:
 	$(MAKE) clean

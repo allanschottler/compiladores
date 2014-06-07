@@ -241,7 +241,8 @@ Instr* Instr_new(Opcode op, ...) {
 /*
 Output an instruction to the given file descriptor.
 */
-static void Instr_dump(Instr* ins, FILE* fd) {
+void Instr_dump(Instr* ins, FILE* fd) {
+    if( !ins ) return;
 	const char* x = ins->x.str;
 	const char* y = ins->y.str;
 	const char* z = ins->z.str;

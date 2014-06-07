@@ -26,7 +26,6 @@ int main(int argc, char** argv) {
 		exit(1);
 	}
 	
-	IR_dump(ir, stdout);
 	Assembler * asm = ASM_New();
 	ASM_Build( asm, ir );
 	
