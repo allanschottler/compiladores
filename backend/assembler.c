@@ -20,12 +20,22 @@ struct varhash
 	UT_hash_handle hh;
 };
 
+typedef struct usagehash UsageHash;
+
+struct usagehash
+{
+    char * id;
+    int value;	
+	UT_hash_handle hh;
+};
+
 typedef struct basicblock BasicBlock;
 
 struct basicblock
 {
     Instr * start;
     Instr * end;
+    int size;
 };
 
 BasicBlock * BBL_New()
@@ -33,6 +43,7 @@ BasicBlock * BBL_New()
     BasicBlock * bbl = ( BasicBlock* )malloc( sizeof( BasicBlock ) );
     bbl->start = NULL;
     bbl->end = NULL;
+    bbl->size = 0;
     
     return bbl;
 }
@@ -45,6 +56,7 @@ void BBL_Delete( BasicBlock * bbl )
 struct assembler
 {
     VarHash * varStates;
+    UsageHash * varUsages;
 };
 
 /*
@@ -55,6 +67,7 @@ Assembler * ASM_New()
     Assembler * asm = ( Assembler* )malloc( sizeof( Assembler ) );
     
     asm->varStates = NULL;
+    asm->varUsages = NULL;
     
     return asm;
 }
@@ -70,12 +83,14 @@ void ASM_Delete( Assembler * asm )
 /*
 Creates an entry in vars hash
 */
-int ASM_AddVar( Assembler * asm, char * name )
+void ASM_AddVar( Assembler * asm, char * name )
 {
     if( !name )
-        return 0;
+        return;
     
     VarHash *h;
+    
+    // States
     HASH_FIND_STR( asm->varStates, name, h );
         
     if( !h )
@@ -84,9 +99,7 @@ int ASM_AddVar( Assembler * asm, char * name )
 	    h->id = strdup( name );
 	    h->value = NULL;	    
 	
-	    HASH_ADD_STR( asm->varStates, id, h ); //This works cuz macros
-	    
-	    return 1;
+	    HASH_ADD_STR( asm->varStates, id, h );
 	}
 	else
 	{
@@ -94,27 +107,77 @@ int ASM_AddVar( Assembler * asm, char * name )
 	    exit( EXIT_FAILURE );
 	}
 	
-	return 0;
+	// Usages
+	HASH_FIND_STR( asm->varUsages, name, h );
+        
+    if( !h )
+    {
+	    UsageHash * h = ( UsageHash* )malloc( sizeof( UsageHash ) );
+	    h->id = strdup( name );
+	    h->value = 0;	    
+	
+	    HASH_ADD_STR( asm->varUsages, id, h );
+	}
+	else
+	{
+	    fprintf( stderr, "!Assembling Error: internal compiler error.\n");
+	    exit( EXIT_FAILURE );
+	}
 }
 
 /*
-Clears states hash
+Sets value of key name in hash
 */
-void ASM_ClearLocalVars( Assembler * asm )
+void ASM_SetVarValue( Assembler * asm, char * name, char * value )
 {
-    VarHash *curr, *tmp;
+    VarHash * h = ( VarHash* )malloc( sizeof( VarHash ) );
+    VarHash * tmp;
+    h->id = strdup( name );
+    h->value = value;
+    HASH_REPLACE_STR( asm->varStates, id, h, tmp );
+    free( tmp );
+}
 
-    HASH_ITER( hh, asm->varStates, curr, tmp ) 
-    {
-        HASH_DEL( asm->varStates, curr );
-        free( curr );
-    }
+/*
+Sets vars next alive usage within instruction
+*/
+void ASM_SetVarUsage( Assembler * asm, char * name, int value )
+{
+    if( !name )
+        return;
+    
+    UsageHash * h = ( UsageHash* )malloc( sizeof( UsageHash ) );
+    UsageHash * tmp;
+    h->id = strdup( name );
+    h->value = value;	    
+	
+    HASH_REPLACE_STR( asm->varUsages, id, h, tmp );
+    free( tmp );	   
+}
+
+/*
+Gets vars next alive usage within instruction
+*/
+int ASM_GetVarUsage( Assembler * asm, char * name )
+{
+    if( !name )
+        return 0;
+    
+    UsageHash *h;
+    HASH_FIND_STR( asm->varUsages, name, h );
+        
+    if( h )
+    {	    
+	    return h->value;
+	}   
+	
+	return 0;
 }
 
 /*
 Dumps hash entries for debugging
 */
-void ASM_DumpLocalVars( Assembler * asm )
+/*void ASM_DumpLocalVars( Assembler * asm )
 {
     VarHash *curr, *tmp;
 
@@ -122,12 +185,21 @@ void ASM_DumpLocalVars( Assembler * asm )
     {
         printf( "%s %s\n", curr->id, curr->value );
     }
+}*/
+
+/*
+Clears states hash
+*/
+void ASM_ClearHashes( Assembler * asm )
+{    
+    HASH_CLEAR( hh, asm->varStates );
+    HASH_CLEAR( hh, asm->varUsages );
 }
 
 /*
 Adds registers and variables to hash
 */
-void ASM_SetupLocalVars( Assembler * asm, Function * func )
+void ASM_SetupHashes( Assembler * asm, Function * func )
 {
     int i;
     char * str = malloc( 64 );
@@ -198,10 +270,11 @@ int ASM_NextBasicBlock( Assembler * asm, Function * func, BasicBlock * bbl )
     {
         last = currIns;  
         currIns = currIns->next;
+        bbl->size++;
     }            
         
     while( currIns && !foundEnd )
-    {
+    {        
         type = getInstructionType( currIns );
         
         if( type != BB_INS )
@@ -214,13 +287,14 @@ int ASM_NextBasicBlock( Assembler * asm, Function * func, BasicBlock * bbl )
             }
             else
             {
-                bbl->end = last;
+                bbl->end = last;                
                 break;
             }
         }
         
         last = currIns;  
         currIns = currIns->next;
+        bbl->size++;
     }
     
     if( !currIns )    
@@ -238,11 +312,34 @@ void ASM_GenerateBlock( Assembler * asm, BasicBlock * bbl )
 }
 
 /*
-Tags addresses next alive reference
+Tags addresses' next alive reference
 */
-void ASM_SetupVarsLiveness( Assembler * asm, BasicBlock * bbl )
+void ASM_SetupVarsLiveness( Assembler * asm, Instr * start, Instr * end, int depth  )
 {
-
+    if( start == end )
+    {
+        printf( "DEPTH %d\n", depth );
+        if( start->x.type == AD_TEMP || start->x.type == AD_LOCAL )
+        {
+            start->x.nextUsage = 0;
+            ASM_SetVarUsage( asm, start->x.str, depth );
+        }
+        start->y.nextUsage = 0;
+        ASM_SetVarUsage( asm, start->y.str, depth );
+        start->z.nextUsage = 0; 
+        ASM_SetVarUsage( asm, start->z.str, depth );        
+                                    
+        return;
+    }
+    
+    ASM_SetupVarsLiveness( asm, start->next, end, depth+1 );
+    
+    start->x.nextUsage = ASM_GetVarUsage( asm, start->x.str );
+    ASM_SetVarUsage( asm, start->x.str, depth );
+    start->y.nextUsage = ASM_GetVarUsage( asm, start->y.str );
+    ASM_SetVarUsage( asm, start->y.str, depth );
+    start->z.nextUsage = ASM_GetVarUsage( asm, start->z.str );
+    ASM_SetVarUsage( asm, start->z.str, depth );
 }
 
 /*
@@ -257,9 +354,22 @@ void ASM_BuildBlocks( Assembler * asm, Function * func )
     do
     {        
         loop = ASM_NextBasicBlock( asm, func, bbl );
-    
-        ASM_SetupVarsLiveness( asm, bbl );
+                
+        ASM_SetupVarsLiveness( asm, bbl->start, bbl->end, 1 );
         ASM_GenerateBlock( asm, bbl );
+        
+        printf( "\nfun %s block %d size %d\n", func->name, blockNum++, bbl->size );
+        Instr * start;
+        for( start = bbl->start; start; start = start->next )
+        {
+            Instr_dump( start, stdout );
+            printf( "\t%d %d %d\n", start->x.nextUsage, start->y.nextUsage, start->z.nextUsage );
+                        
+        }
+        
+        ASM_ClearHashes( asm );
+        
+        bbl->size = 0;
     }
     while( loop );    
 }
@@ -272,8 +382,8 @@ void ASM_Build( Assembler * asm, IR * ir )
     Function * func = ir->functions;
     while( func )
     {
-        ASM_ClearLocalVars( asm );
-        ASM_SetupLocalVars( asm, func );
+        ASM_ClearHashes( asm );
+        ASM_SetupHashes( asm, func );
         ASM_BuildBlocks( asm, func );
         func = func->next;
     }

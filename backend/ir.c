@@ -12,12 +12,16 @@
 Given an element and a list, make it a new list
 with the given element as the head ("cons" a.k.a. (x:xs) operation).
 */
-List* List_link(List* elem, List* list) {
-	if (!elem) {
-		return list;
+List* List_link(List* l1, List* l2) {
+	if (!l1) {
+		return l2;
 	}
-	elem->next = list;
-	return elem;
+	List* last = l1;
+	while (last->next) {
+		last = last->next;
+	}
+	last->next = l2;
+	return l1;
 }
 
 // -------------------- String --------------------

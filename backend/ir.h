@@ -68,7 +68,12 @@ typedef struct Addr_ {
 	For AD_NUMBER entries, num contains the numeric value.
 	For other entries, num is zero.
 	*/
-	int num;	            
+	int num;
+	/*
+	Defines the next alive usage of address within the 
+	basic block it belongs to.
+	*/
+	int nextUsage;	            
 } Addr;
 
 typedef struct List_ List;
@@ -169,13 +174,13 @@ void IR_addFunction(IR* ir, Function* fun);
 void IR_dump(IR* ir, FILE* fd);
 
 String* String_new(char* name, char* value);
-#define String_link(e, l) ((String*)List_link((List*)(e), (List*)(l)))
+#define String_link(_l1, _l2) ((String*)List_link((List*)(_l1), (List*)(_l2)))
 
 Variable* Variable_new(char* name);
-#define Variable_link(e, l) ((Variable*)List_link((List*)(e), (List*)(l)))
+#define Variable_link(_l1, _l2) ((Variable*)List_link((List*)(_l1), (List*)(_l2)))
 
 Instr* Instr_new(Opcode op, ...);
-#define Instr_link(e, l) ((Instr*)List_link((List*)(e), (List*)(l)))
+#define Instr_link(_l1, _l2) ((Instr*)List_link((List*)(_l1), (List*)(_l2)))
 
 void Instr_dump(Instr* ins, FILE* fd);
 
