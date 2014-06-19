@@ -93,6 +93,7 @@ Addr Addr_litNum(int num) {
 	char* str = malloc(21);
 	snprintf(str, 20, "%d", num);
 	addr.str = str;
+	addr.nextUsage = -1;
 	return addr;
 }
 
@@ -104,6 +105,7 @@ Addr Addr_label(char* label) {
 	addr.type = AD_LABEL;
 	addr.num = -1;
 	addr.str = label;
+	addr.nextUsage = -1;	
 	return addr;
 }
 
@@ -115,6 +117,7 @@ Addr Addr_function(char* name) {
 	addr.type = AD_FUNCTION;
 	addr.num = -1;
 	addr.str = name;
+	addr.nextUsage = -1;	
 	return addr;
 }
 
@@ -131,6 +134,7 @@ its name and index.
 Addr Addr_resolve(char* name, IR* ir, Function* fun) {
 	Addr addr;
 	addr.str = name;
+	addr.nextUsage = -1;
 	if (name[0] == '$') {
 		int i;
 		Variable* v = Variable_find(fun->temps, name, &i);
