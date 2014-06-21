@@ -86,7 +86,7 @@ Grammar
    55     | NEW
    56     | NEW BYTE
 
-   57 call: params CALL ID
+   57 call: params CALL ID LITNUM
 
    58 params: param nl params
    59       | %empty
@@ -127,7 +127,7 @@ CALL (270) 57
 RET (271) 42 43
 NL (272) 11 12
 LITSTRING (273) 14
-LITNUM (274) 28
+LITNUM (274) 28 57
 EQ (275) 44
 NE (276) 45
 LE (277) 49
@@ -689,7 +689,7 @@ State 52
 
 State 53
 
-   57 call: params . CALL ID
+   57 call: params . CALL ID LITNUM
 
     CALL  shift, and go to state 66
 
@@ -811,7 +811,7 @@ State 65
 
 State 66
 
-   57 call: params CALL . ID
+   57 call: params CALL . ID LITNUM
 
     ID  shift, and go to state 79
 
@@ -937,9 +937,9 @@ State 78
 
 State 79
 
-   57 call: params CALL ID .
+   57 call: params CALL ID . LITNUM
 
-    $default  reduce using rule 57 (call)
+    LITNUM  shift, and go to state 100
 
 
 State 80
@@ -968,7 +968,7 @@ State 83
    29 rval: id .
    36 command: id '=' BYTE id . '[' rval ']'
 
-    '['  shift, and go to state 100
+    '['  shift, and go to state 101
 
     $default  reduce using rule 29 (rval)
 
@@ -995,7 +995,7 @@ State 86
     LITNUM  shift, and go to state 56
 
     id    go to state 57
-    rval  go to state 101
+    rval  go to state 102
 
 
 State 87
@@ -1076,7 +1076,7 @@ State 97
     LITNUM  shift, and go to state 56
 
     id    go to state 57
-    rval  go to state 102
+    rval  go to state 103
 
 
 State 98
@@ -1091,10 +1091,17 @@ State 99
    35 command: id '[' rval ']' . '=' rval
    37        | id '[' rval ']' . '=' BYTE rval
 
-    '='  shift, and go to state 103
+    '='  shift, and go to state 104
 
 
 State 100
+
+   57 call: params CALL ID LITNUM .
+
+    $default  reduce using rule 57 (call)
+
+
+State 101
 
    36 command: id '=' BYTE id '[' . rval ']'
 
@@ -1102,51 +1109,51 @@ State 100
     LITNUM  shift, and go to state 56
 
     id    go to state 57
-    rval  go to state 104
-
-
-State 101
-
-   34 command: id '=' id '[' rval . ']'
-
-    ']'  shift, and go to state 105
+    rval  go to state 105
 
 
 State 102
+
+   34 command: id '=' id '[' rval . ']'
+
+    ']'  shift, and go to state 106
+
+
+State 103
 
    32 command: id '=' rval binop rval .
 
     $default  reduce using rule 32 (command)
 
 
-State 103
+State 104
 
    35 command: id '[' rval ']' '=' . rval
    37        | id '[' rval ']' '=' . BYTE rval
 
-    BYTE    shift, and go to state 106
+    BYTE    shift, and go to state 107
     ID      shift, and go to state 44
     LITNUM  shift, and go to state 56
 
     id    go to state 57
-    rval  go to state 107
-
-
-State 104
-
-   36 command: id '=' BYTE id '[' rval . ']'
-
-    ']'  shift, and go to state 108
+    rval  go to state 108
 
 
 State 105
+
+   36 command: id '=' BYTE id '[' rval . ']'
+
+    ']'  shift, and go to state 109
+
+
+State 106
 
    34 command: id '=' id '[' rval ']' .
 
     $default  reduce using rule 34 (command)
 
 
-State 106
+State 107
 
    37 command: id '[' rval ']' '=' BYTE . rval
 
@@ -1154,24 +1161,24 @@ State 106
     LITNUM  shift, and go to state 56
 
     id    go to state 57
-    rval  go to state 109
+    rval  go to state 110
 
 
-State 107
+State 108
 
    35 command: id '[' rval ']' '=' rval .
 
     $default  reduce using rule 35 (command)
 
 
-State 108
+State 109
 
    36 command: id '=' BYTE id '[' rval ']' .
 
     $default  reduce using rule 36 (command)
 
 
-State 109
+State 110
 
    37 command: id '[' rval ']' '=' BYTE rval .
 

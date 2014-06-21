@@ -26,8 +26,11 @@ int main(int argc, char** argv) {
 		exit(1);
 	}
 	
+	char filepath[100];
+	sprintf( filepath, "%s.s", argv[1] );
+	
 	Assembler * asm = ASM_New();
-	ASM_Build( asm, ir );
+	ASM_Build( asm, ir, filepath );
 	
 	return 0;
 }

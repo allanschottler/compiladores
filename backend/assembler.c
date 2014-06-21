@@ -17,7 +17,8 @@ typedef struct varhash VarHash;
 struct varhash
 {
     char * id;
-    char * value;	
+    char * value[32];
+    int size;	
 	UT_hash_handle hh;
 };
 
@@ -113,8 +114,11 @@ void ASM_AddVar( Assembler * asm, char * name )
     {
 	    VarHash * h = ( VarHash* )malloc( sizeof( VarHash ) );
 	    h->id = strdup( name );
-	    h->value = NULL;	    
-	
+	    h->size = 0;
+	    int i;
+	    for( i = 0; i < 32; i++ )
+    	    h->value[i] = NULL;
+	    
 	    HASH_ADD_STR( asm->varStates, id, h );
 	}
 	else
@@ -147,21 +151,77 @@ Sets value of key name in hash
 void ASM_SetVarValue( Assembler * asm, char * name, char * value )
 {
     if( !name )
-        return;
-        
+        return; 
+    
     VarHash * h = ( VarHash* )malloc( sizeof( VarHash ) );
     VarHash * tmp;
-    h->id = strdup( name );
-    h->value = strdup( value );
+    h->id = strdup( name ); 
+    h->size = 0;   
     
     HASH_FIND_STR( asm->varStates, name, tmp );
         
     if( tmp )
-    {        
+    {  
+        if( value ) 
+        {   
+            h->value[h->size++] = strdup( value );
+        }        
+        
         HASH_DEL( asm->varStates, tmp );	    
     }   
     
     HASH_ADD_STR( asm->varStates, id, h );
+}
+
+/*
+Adds value of key name in hash
+*/
+void ASM_AddVarValue( Assembler * asm, char * name, char * value )
+{
+    if( !name )
+        return; 
+    
+    VarHash * h = ( VarHash* )malloc( sizeof( VarHash ) );
+    VarHash * tmp;
+    h->id = strdup( name );
+    h->size = 0;    
+    
+    HASH_FIND_STR( asm->varStates, name, tmp );
+        
+    if( tmp )
+    {      
+        int i;  
+        for( i = 0; i < tmp->size; i++ )
+        {
+            h->value[h->size++] = strdup( tmp->value[i] );            
+        }
+        
+        h->value[h->size++] = strdup( value );
+        
+        HASH_DEL( asm->varStates, tmp );	    
+    }   
+    
+    HASH_ADD_STR( asm->varStates, id, h );
+}
+
+/*
+Gets vars value
+*/
+int ASM_GetVarValues( Assembler * asm, char * name, char *** out )
+{
+    if( !name )
+        return 0;
+    
+    VarHash *h;
+    HASH_FIND_STR( asm->varStates, name, h );
+        
+    if( h )
+    {	
+        *out = h->value;
+	    return h->size;
+	}   
+	
+	return 0;
 }
 
 /*
@@ -334,12 +394,381 @@ int ASM_NextBasicBlock( Assembler * asm, Function * func, BasicBlock * bbl )
     return ( currIns != NULL );
 }
 
+void ASM_UpdateLoad( Assembler * asm, char * reg, char * var )
+{
+    ASM_SetVarValue( asm, reg, var );
+    ASM_AddVarValue( asm, var, reg );    
+}
+
+void ASM_UpdateStore( Assembler * asm, char * var )
+{
+    ASM_AddVarValue( asm, var, var );    
+}
+
+void ASM_UpdateOperation( Assembler * asm, char * regx, char * varx )
+{
+    ASM_SetVarValue( asm, regx, varx );
+    ASM_SetVarValue( asm, varx, regx );
+    
+    VarHash * tmp, * s;
+    HASH_ITER( hh, asm->varStates, s, tmp ) 
+    {
+        if( s->id[0] != '$' )
+        {
+            int i;
+            for( i = 0; i < s->size; i++ )
+            {
+                if( strcmp( regx, s->value[i] ) == 0 )
+                {
+                    free( s->value[i] );
+                    
+                    // Shift everything left. Why am I not using c++ again?
+                    int j;
+                    for( j = i; j < s->size - 1; j++ )
+                    {
+                        s->value[j] = s->value[j+1];
+                    }
+                    
+                    s->value[s->size] = NULL;
+                    s->size--;
+                }
+            }
+        }
+    }        
+}
+
+char * ASM_FindRegisterForAddress( Assembler * asm, Addr a )
+{
+    if( !a.str )
+        return NULL;
+        
+    int i;
+    char * emptyReg = NULL;
+    char ** valueA;
+    int sizeA = ASM_GetVarValues( asm, a.str, &valueA );
+    if( !sizeA )
+        return NULL;
+       
+    for( i = 0; i < N_REGS/2; i++ )
+    {
+        char * reg = malloc( 5 );
+        sprintf( reg, "$R%d", i );
+        
+        char ** valueReg;
+        int sizeReg = ASM_GetVarValues( asm, reg, &valueReg );
+        
+        if( !sizeReg )
+        {
+            if( !emptyReg )
+                emptyReg = reg;
+                
+            continue;
+        }
+        
+        if( strcmp( valueA[0], valueReg[0] ) == 0 )
+        {
+            /*free( valueA );
+            free( valueReg );*/
+            free( emptyReg );
+            return reg;
+        }
+        
+        free( reg );
+        //free( valueReg );
+    }
+    
+    if( emptyReg ) 
+    {
+        //free( valueA );   
+        return emptyReg;  
+    } 
+    
+    //INCOMPLETO
+    
+    return 0;
+}
+
+/*
+Returns[in] registers for each address in instruction
+Returns[out] number of registers returned
+*/
+/*int ASM_GetRegisters( Assembler * asm, Instr * ins, char ** x, char ** y, char ** z )
+{
+    *y = ASM_FindRegisterForAddress( asm, ins->y );
+    *z = ASM_FindRegisterForAddress( asm, ins->z );
+    
+    switch( ins->op ) 
+    {
+		// instructions with x only
+		case OP_LABEL:
+		case OP_GOTO:
+		    return 0;
+		    
+		case OP_PARAM:
+		{
+		    if( ins->x.type == AD_NUMBER )
+		    {
+		        return 0;
+		    }
+		    else
+		    {
+		        *x = ASM_FindRegisterForAddress( asm, ins->x );
+		        return 1;
+		    }
+		}
+				
+		case OP_RET_VAL:
+		{
+			ins->x = va_arg(ap, Addr);
+			break;
+		}
+		// instructions with x and y
+		case OP_IF:
+		case OP_IF_FALSE:
+		case OP_SET:
+		case OP_SET_BYTE:
+		case OP_NEG:
+		case OP_NEW:
+		case OP_NEW_BYTE:
+		case OP_CALL:
+		{
+			ins->x = va_arg(ap, Addr);
+			ins->y = va_arg(ap, Addr);
+			break;
+		}
+		// instruction with x, y and z
+		case OP_SET_IDX:
+		case OP_SET_IDX_BYTE:
+		case OP_IDX_SET:
+		case OP_IDX_SET_BYTE:
+		case OP_NE:
+		case OP_EQ:
+		case OP_LT:
+		case OP_GT:
+		case OP_LE:
+		case OP_GE:
+		case OP_ADD:
+		case OP_SUB:
+		case OP_DIV:
+		case OP_MUL:
+		{
+			ins->x = va_arg(ap, Addr);
+			ins->y = va_arg(ap, Addr);
+			ins->z = va_arg(ap, Addr);
+			break;
+		}
+		// instruction with no args
+		case OP_RET:
+		{
+			break;
+		}
+	}
+}*/
+
+static char * keyToRegister( char * key, int isByte )
+{
+    char * str = malloc( 5 );
+    
+    if( strcmp( key, "$R0" ) == 0 )
+    {
+        if( !isByte )
+            sprintf( str, "%%eax" );        
+        else
+            sprintf( str, "%%al" );        
+    }
+    else if( strcmp( key, "$R1" ) == 0 )
+    {
+        if( !isByte )
+            sprintf( str, "%%ebx" );        
+        else
+            sprintf( str, "%%bl" );        
+    }
+    else if( strcmp( key, "$R2" ) == 0 )
+    {
+        if( !isByte )
+            sprintf( str, "%%ecx" );        
+        else
+            sprintf( str, "%%cl" );        
+    }
+    else if( strcmp( key, "$R3" ) == 0 )
+    {
+        if( !isByte )
+            sprintf( str, "%%edx" );        
+        else
+            sprintf( str, "%%dl" );        
+    }
+    else
+    {
+        printf( "SOMETHING IS WRONG, FIX MEEEEEE!\n" );
+        return 0;
+    }
+    
+    return str;
+}
+
 /*
 Generates assembly code of given basic block
 */
 void ASM_GenerateCode( Assembler * asm, BasicBlock * bbl )
 {
+    Instr * curr = bbl->start;
+    
+    while( curr != bbl->end->next )
+    {
+        switch( curr->op )
+        {
+            case OP_LABEL:
+            {
+                printf( "%s:\n", curr->x.str );
+                break;
+            }
+                
+		    case OP_GOTO:
+		    {
+		        printf( "\tjmp %s\n", curr->x.str );
+		        break;
+		    }
+		       
+		    case OP_PARAM:
+		    {	
+		        char * x = ASM_FindRegisterForAddress( asm, curr->x );	
+		        
+		        printf( "\tpushl %s\n", x );
+		        free( x );
+		        break;
+		    }
+		    
+		    case OP_RET_VAL:
+		    {
+			    
+			    break;
+		    }
+		    
+		    // instructions with x and y
+		    case OP_IF:
+		    {
+		        char * cond = ASM_FindRegisterForAddress( asm, curr->x );
+		        	        
+		        printf( "\tcmpl $1 %s\n", cond );
+		        printf( "\tjeq %s\n", curr->y.str );
+		        free( cond );
+		        break;
+		    }
+		    
+		    case OP_IF_FALSE:
+		    {
+		        char * cond = ASM_FindRegisterForAddress( asm, curr->x );;
+		       	char * rcond = keyToRegister( cond, 0 );
+		       		        
+		        printf( "\tcmpl $1 %s\n", rcond );
+		        printf( "\tjne %s\n", curr->y.str );
+		        free( cond );
+		        free( rcond );
+		        break;
+		    }
+		    
+		    case OP_SET:
+		    {
+	            char * x = ASM_FindRegisterForAddress( asm, curr->x );
+	            char * rx = keyToRegister( x, 0 );
+	            
+		        if( curr->y.type == AD_NUMBER )
+		        {
+		            printf( "\tmovl %s $%s\n", rx, curr->y.str );
+		        }
+		        else
+		        {		            
+	                char * y = ASM_FindRegisterForAddress( asm, curr->y );
+	                char * ry = keyToRegister( y, 0 );
+	                
+	                ASM_UpdateLoad( asm, y, curr->y.str );
+	                printf( "\tmovl %s %s\n", curr->y.str, ry );
+		            printf( "\tmovl %s %s\n", ry, rx );
+		            free( y );
+		            free( ry );
+		        }		        
+		        
+		        free( x );
+		        free( rx );
+		        break;
+		    }
+		    
+		    case OP_SET_BYTE:
+		    {
+		        char * x = ASM_FindRegisterForAddress( asm, curr->x );
+	            char * rx = keyToRegister( x, 0 );
+	            
+		        if( curr->y.type == AD_NUMBER )
+		        {
+		            printf( "\tmovsbl %s $%s\n", rx, curr->y.str );
+		        }
+		        else
+		        {		            
+	                char * y = ASM_FindRegisterForAddress( asm, curr->y );
+	                char * ry = keyToRegister( y, 1 );
+	                
+	                ASM_UpdateLoad( asm, y, curr->y.str );
+	                printf( "\tmovsbl %s %s\n", curr->y.str, ry );
+		            printf( "\tmovsbl %s %s\n", ry, rx );
+		            free( y );
+		            free( ry );
+		        }		        
+		        
+		        free( x );
+		        free( rx );
+		        break;
+		    }
+		    
+		    case OP_NEG:
+		    {
+		        char * x = ASM_FindRegisterForAddress( asm, curr->x );
+	            char * rx = keyToRegister( x, 0 );
+		        char * y = ASM_FindRegisterForAddress( asm, curr->y );
+	            char * ry = keyToRegister( y, 0 );
+		        printf( "\tnegl %s\n", ry );
+		        printf( "\tmovl %s %s\n", ry, rx );
+		        free( x );
+		        free( rx );
+		        free( y );
+		        free( ry );
+		    }
+		    
+		    case OP_NEW:
+		    case OP_NEW_BYTE:
+		    case OP_CALL:
+		    {
+			    
+			    break;
+		    }
+		    
+		    // instruction with x, y and z
+		    case OP_SET_IDX:
+		    case OP_SET_IDX_BYTE:
+		    case OP_IDX_SET:
+		    case OP_IDX_SET_BYTE:
+		    case OP_NE:
+		    case OP_EQ:
+		    case OP_LT:
+		    case OP_GT:
+		    case OP_LE:
+		    case OP_GE:
+		    case OP_ADD:
+		    case OP_SUB:
+		    case OP_DIV:
+		    case OP_MUL:
+		    {
+			    
+			    break;
+		    }
+		    // instruction with no args
+		    case OP_RET:
+		    {
+			    break;
+		    }
+        }
         
+        curr = curr->next;
+    }
 }
 
 void ASM_SetVarLiveness( Assembler * asm, Addr * var, int nextUsage, int thisUsage )
@@ -384,28 +813,55 @@ Builds given function's basic blocks
 */
 void ASM_BuildBlocks( Assembler * asm, Function * func )
 {
-    int blockNum = 0;
     int loop = 0;
     BasicBlock * bbl = BBL_New();
+    
+    printf( ".%s:\n", func->name );
+    printf( "\tpushl %%ebp\n" );
+    printf( "\tmovl %%esp, %%ebp\n" );
     
     do
     {        
         loop = ASM_NextBasicBlock( asm, func, bbl );
                 
         ASM_SetupVarsLiveness( asm, bbl->start, bbl->end, 1 );        
-        BBL_Dump( bbl, func, blockNum++ );
         ASM_GenerateCode( asm, bbl );
         ASM_ClearHashes( asm ); 
+        //BBL_Dump( bbl, func, blockNum++ );
     }
-    while( loop );    
+    while( loop );
+    
+    printf( "\tmovl %%ebp, %%esp\n" );    
+    printf( "\tpopl %%ebp\n" );
+    printf( "\tret\n" );    
 }
 
 /*
 Builds assembly code
 */
-void ASM_Build( Assembler * asm, IR * ir )
+void ASM_Build( Assembler * asm, IR * ir, char * filepath )
 {
+    FILE * fp = freopen( filepath, "w", stdout );
+    
+    printf( ".section .data\n" );
+    
+    String * str = ir->strings;
+    while( str )
+    {
+        printf( "%s: .ascii \"%s\\0\"\n", str->name, str->value );
+        str = str->next;
+    }
+        
+    printf( ".section .text\n" );
+    
     Function * func = ir->functions;
+    while( func )
+    {
+        printf( ".globl %s\n", func->name );
+        func = func->next;
+    }
+    
+    func = ir->functions;
     while( func )
     {
         //ASM_ClearHashes( asm );
@@ -413,4 +869,6 @@ void ASM_Build( Assembler * asm, IR * ir )
         ASM_BuildBlocks( asm, func );
         func = func->next;
     }
+    
+    fclose( fp );
 }

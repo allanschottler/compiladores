@@ -7,4 +7,4 @@ Assembler * ASM_New();
 
 void ASM_Delete( Assembler * asm );
 
-void ASM_Build( Assembler * asm, IR * ir );
+void ASM_Build( Assembler * asm, IR * ir, char * filepath );
