@@ -217,7 +217,12 @@ int ASM_GetVarValues( Assembler * asm, char * name, char *** out )
         
     if( h )
     {	
-        *out = h->value;
+        *out = malloc( 32 * sizeof( char* ) );
+        int i;
+        for( i = 0; i < h->size; i++ )
+        {
+            (*out)[i] = strdup( h->value[i] );
+        }
 	    return h->size;
 	}   
 	
@@ -437,134 +442,6 @@ void ASM_UpdateOperation( Assembler * asm, char * regx, char * varx )
     }        
 }
 
-char * ASM_FindRegisterForAddress( Assembler * asm, Addr a )
-{
-    if( !a.str )
-        return NULL;
-        
-    int i;
-    char * emptyReg = NULL;
-    char ** valueA;
-    int sizeA = ASM_GetVarValues( asm, a.str, &valueA );
-    if( !sizeA )
-        return NULL;
-       
-    for( i = 0; i < N_REGS/2; i++ )
-    {
-        char * reg = malloc( 5 );
-        sprintf( reg, "$R%d", i );
-        
-        char ** valueReg;
-        int sizeReg = ASM_GetVarValues( asm, reg, &valueReg );
-        
-        if( !sizeReg )
-        {
-            if( !emptyReg )
-                emptyReg = reg;
-                
-            continue;
-        }
-        
-        if( strcmp( valueA[0], valueReg[0] ) == 0 )
-        {
-            /*free( valueA );
-            free( valueReg );*/
-            free( emptyReg );
-            return reg;
-        }
-        
-        free( reg );
-        //free( valueReg );
-    }
-    
-    if( emptyReg ) 
-    {
-        //free( valueA );   
-        return emptyReg;  
-    } 
-    
-    //INCOMPLETO
-    
-    return 0;
-}
-
-/*
-Returns[in] registers for each address in instruction
-Returns[out] number of registers returned
-*/
-/*int ASM_GetRegisters( Assembler * asm, Instr * ins, char ** x, char ** y, char ** z )
-{
-    *y = ASM_FindRegisterForAddress( asm, ins->y );
-    *z = ASM_FindRegisterForAddress( asm, ins->z );
-    
-    switch( ins->op ) 
-    {
-		// instructions with x only
-		case OP_LABEL:
-		case OP_GOTO:
-		    return 0;
-		    
-		case OP_PARAM:
-		{
-		    if( ins->x.type == AD_NUMBER )
-		    {
-		        return 0;
-		    }
-		    else
-		    {
-		        *x = ASM_FindRegisterForAddress( asm, ins->x );
-		        return 1;
-		    }
-		}
-				
-		case OP_RET_VAL:
-		{
-			ins->x = va_arg(ap, Addr);
-			break;
-		}
-		// instructions with x and y
-		case OP_IF:
-		case OP_IF_FALSE:
-		case OP_SET:
-		case OP_SET_BYTE:
-		case OP_NEG:
-		case OP_NEW:
-		case OP_NEW_BYTE:
-		case OP_CALL:
-		{
-			ins->x = va_arg(ap, Addr);
-			ins->y = va_arg(ap, Addr);
-			break;
-		}
-		// instruction with x, y and z
-		case OP_SET_IDX:
-		case OP_SET_IDX_BYTE:
-		case OP_IDX_SET:
-		case OP_IDX_SET_BYTE:
-		case OP_NE:
-		case OP_EQ:
-		case OP_LT:
-		case OP_GT:
-		case OP_LE:
-		case OP_GE:
-		case OP_ADD:
-		case OP_SUB:
-		case OP_DIV:
-		case OP_MUL:
-		{
-			ins->x = va_arg(ap, Addr);
-			ins->y = va_arg(ap, Addr);
-			ins->z = va_arg(ap, Addr);
-			break;
-		}
-		// instruction with no args
-		case OP_RET:
-		{
-			break;
-		}
-	}
-}*/
-
 static char * keyToRegister( char * key, int isByte )
 {
     char * str = malloc( 5 );
@@ -606,6 +483,88 @@ static char * keyToRegister( char * key, int isByte )
     return str;
 }
 
+char * ASM_FindRegisterForAddress( Assembler * asm, Addr a )
+{
+    if( !a.str )
+        return NULL;
+        
+    int i;
+    char * emptyReg = NULL;
+    char ** valueA;
+    int sizeA = ASM_GetVarValues( asm, a.str, &valueA );
+    
+    if( sizeA )
+    {       
+        for( i = 0; i < N_REGS/2; i++ )
+        {
+            char * reg = malloc( 5 );
+            sprintf( reg, "$R%d", i );
+            
+            char ** valueReg;
+            int sizeReg = ASM_GetVarValues( asm, reg, &valueReg );
+            
+            if( !sizeReg )
+            {
+                if( !emptyReg )
+                    emptyReg = reg;
+                    
+                continue;
+            }
+            
+            if( strcmp( valueA[0], valueReg[0] ) == 0 )
+            {
+                /*free( valueA );
+                free( valueReg );*/
+                free( emptyReg );
+                return reg;
+            }
+            
+            free( reg );
+            //free( valueReg );
+        }
+        
+        if( emptyReg ) 
+        {
+            //free( valueA );   
+            return emptyReg;  
+        }
+    } 
+    
+    //Spill
+    char ** valueReg;
+    int sizeReg = ASM_GetVarValues( asm, "$R2", &valueReg );
+    char * key = malloc( 5 );
+    sprintf( key, "$R2" );
+    char * reg = keyToRegister( key, 0 );
+    
+    if( sizeReg )
+    {
+        printf( "\tmovl %s %s\n", reg, valueReg[0] );
+        ASM_UpdateStore( asm, valueReg[0] );
+        
+        int i;
+        for( i = 0; i < sizeReg; i++ )
+            free( valueReg[i] );
+            
+        free( valueReg );
+    }
+    
+    printf( "\tmovl %s %s\n", a.str, reg );
+    ASM_UpdateLoad( asm, reg, a.str );    
+    
+    return key;
+}
+
+static int uniqueLabel = 0;
+
+static char * generateLabel()
+{
+    char * str = malloc( 25 );
+    sprintf( str, ".J%d", uniqueLabel++ );
+    
+    return str;
+}
+
 /*
 Generates assembly code of given basic block
 */
@@ -632,14 +591,33 @@ void ASM_GenerateCode( Assembler * asm, BasicBlock * bbl )
 		    case OP_PARAM:
 		    {	
 		        char * x = ASM_FindRegisterForAddress( asm, curr->x );	
+		        char * rx = keyToRegister( x, 0 );
 		        
 		        printf( "\tpushl %s\n", x );
 		        free( x );
+		        free( rx );
 		        break;
 		    }
 		    
 		    case OP_RET_VAL:
 		    {
+			    char ** ret;
+			    int sizeReg = ASM_GetVarValues( asm, "$R0", &ret );
+		        char * eax = keyToRegister( "$R0", 0 );
+			    
+			    if( sizeReg )
+			    {			        
+			        printf( "\tmovl %s %s\n", eax, ret[0] );
+			        ASM_UpdateStore( asm, ret[0] );			        
+			    }
+			    
+			    char * x = ASM_FindRegisterForAddress( asm, curr->x );
+			    char * rx = keyToRegister( x, 0 );
+			    printf( "\tmovl %s %s\n", rx, eax );
+			    
+			    free( eax );
+			    free( x );
+			    free( rx );
 			    
 			    break;
 		    }
@@ -648,10 +626,12 @@ void ASM_GenerateCode( Assembler * asm, BasicBlock * bbl )
 		    case OP_IF:
 		    {
 		        char * cond = ASM_FindRegisterForAddress( asm, curr->x );
+		        char * rcond = keyToRegister( cond, 0 );
 		        	        
-		        printf( "\tcmpl $1 %s\n", cond );
+		        printf( "\tcmpl $1 %s\n", rcond );
 		        printf( "\tjeq %s\n", curr->y.str );
 		        free( cond );
+		        free( rcond );		        
 		        break;
 		    }
 		    
@@ -674,7 +654,7 @@ void ASM_GenerateCode( Assembler * asm, BasicBlock * bbl )
 	            
 		        if( curr->y.type == AD_NUMBER )
 		        {
-		            printf( "\tmovl %s $%s\n", rx, curr->y.str );
+		            printf( "\tmovl $%s %s\n", curr->y.str, rx );
 		        }
 		        else
 		        {		            
@@ -700,7 +680,7 @@ void ASM_GenerateCode( Assembler * asm, BasicBlock * bbl )
 	            
 		        if( curr->y.type == AD_NUMBER )
 		        {
-		            printf( "\tmovsbl %s $%s\n", rx, curr->y.str );
+		            printf( "\tmovsbl $%s %s\n", curr->y.str, rx );
 		        }
 		        else
 		        {		            
@@ -743,26 +723,339 @@ void ASM_GenerateCode( Assembler * asm, BasicBlock * bbl )
 		    
 		    // instruction with x, y and z
 		    case OP_SET_IDX:
+		    {
+		        char * z = ASM_FindRegisterForAddress( asm, curr->z );
+	            char * rz = keyToRegister( z, 0 );
+		        printf( "\tmovl %s %%esi\n", rz );
+		        printf( "\timul $4 %%esi\n" );
+		        char * y = ASM_FindRegisterForAddress( asm, curr->y );
+	            char * ry = keyToRegister( y, 0 );
+		        printf( "\taddl %s %%esi\n", ry );
+		        char * x = ASM_FindRegisterForAddress( asm, curr->x );
+	            char * rx = keyToRegister( x, 0 );
+		        printf( "\tmovl (%%esi) %s\n", rx );
+		        free( x );
+		        free( rx );
+		        free( y );
+		        free( ry );
+		        free( z );
+		        free( rz );
+		        break;
+		    }
+		    
 		    case OP_SET_IDX_BYTE:
+		    {
+		        char * z = ASM_FindRegisterForAddress( asm, curr->z );
+	            char * rz = keyToRegister( z, 0 );
+		        printf( "\tmovl %s %%esi\n", rz );
+		        char * y = ASM_FindRegisterForAddress( asm, curr->y );
+	            char * ry = keyToRegister( y, 0 );
+		        printf( "\taddl %s %%esi\n", ry );
+		        char * x = ASM_FindRegisterForAddress( asm, curr->x );
+	            char * rx = keyToRegister( x, 0 );
+		        printf( "\tmovsbl %s (%%esi)\n", rx );
+		        free( x );
+		        free( rx );
+		        free( y );
+		        free( ry );
+		        free( z );
+		        free( rz );
+		        break;
+		    }
+		    
 		    case OP_IDX_SET:
+		    {
+		        char * y = ASM_FindRegisterForAddress( asm, curr->y );
+	            char * ry = keyToRegister( y, 0 );
+		        printf( "\tmovl %s %%esi\n", ry );
+		        printf( "\timul $4 %%esi\n" );
+		        char * x = ASM_FindRegisterForAddress( asm, curr->x );
+	            char * rx = keyToRegister( x, 0 );
+		        printf( "\taddl %s %%esi\n", rx );
+		        char * z = ASM_FindRegisterForAddress( asm, curr->z );
+	            char * rz = keyToRegister( z, 0 );
+		        printf( "\tmovl %s (%%esi)\n", rz );
+		        free( x );
+		        free( rx );
+		        free( y );
+		        free( ry );
+		        free( z );
+		        free( rz );
+		        break;
+		    }
+		    
 		    case OP_IDX_SET_BYTE:
+		    {
+		        char * y = ASM_FindRegisterForAddress( asm, curr->y );
+	            char * ry = keyToRegister( y, 0 );
+		        printf( "\tmovl %s %%esi\n", ry );
+		        char * x = ASM_FindRegisterForAddress( asm, curr->x );
+	            char * rx = keyToRegister( x, 0 );
+		        printf( "\taddl %s %%esi\n", rx );
+		        char * z = ASM_FindRegisterForAddress( asm, curr->z );
+	            char * rz = keyToRegister( z, 1 );
+		        printf( "\tmovb %s (%%esi)\n", rz );
+		        free( x );
+		        free( rx );
+		        free( y );
+		        free( ry );
+		        free( z );
+		        free( rz );
+		        break;
+		    }
+		    
 		    case OP_NE:
+		    {
+		        char * x = ASM_FindRegisterForAddress( asm, curr->x );
+	            char * rx = keyToRegister( x, 0 );
+		        char * y = ASM_FindRegisterForAddress( asm, curr->y );
+	            char * ry = keyToRegister( y, 0 );
+	            char * z = ASM_FindRegisterForAddress( asm, curr->z );
+	            char * rz = keyToRegister( z, 0 );
+	            printf( "\tcmp %s %s\n", ry, rz );
+	            char * label = generateLabel();
+	            char * endLabel = generateLabel();	            
+	            printf( "\tjne %s\n", label );
+	            printf( "\tmovl $0 %s\n", rx );
+	            printf( "\tjmp %s\n", endLabel );
+	            printf( "%s:\n", label );
+	            printf( "\tmovl $1 %s\n", rx );	
+	            printf( "%s:\n", endLabel );
+	            free( x );
+		        free( rx );
+		        free( y );
+		        free( ry );
+		        free( z );
+		        free( rz );
+		        free( label );
+		        free( endLabel );
+		        break;            
+            }
+            
 		    case OP_EQ:
+		    {
+		        char * x = ASM_FindRegisterForAddress( asm, curr->x );
+	            char * rx = keyToRegister( x, 0 );
+		        char * y = ASM_FindRegisterForAddress( asm, curr->y );
+	            char * ry = keyToRegister( y, 0 );
+	            char * z = ASM_FindRegisterForAddress( asm, curr->z );
+	            char * rz = keyToRegister( z, 0 );
+	            printf( "\tcmp %s %s\n", ry, rz );
+	            char * label = generateLabel();
+	            char * endLabel = generateLabel();	            
+	            printf( "\tje %s\n", label );
+	            printf( "\tmovl $0 %s\n", rx );
+	            printf( "\tjmp %s\n", endLabel );
+	            printf( "%s:\n", label );
+	            printf( "\tmovl $1 %s\n", rx );	
+	            printf( "%s:\n", endLabel );
+	            free( x );
+		        free( rx );
+		        free( y );
+		        free( ry );
+		        free( z );
+		        free( rz );
+		        free( label );
+		        free( endLabel );
+		        break;            
+            }
+            
 		    case OP_LT:
+		    {
+		        char * x = ASM_FindRegisterForAddress( asm, curr->x );
+	            char * rx = keyToRegister( x, 0 );
+		        char * y = ASM_FindRegisterForAddress( asm, curr->y );
+	            char * ry = keyToRegister( y, 0 );
+	            char * z = ASM_FindRegisterForAddress( asm, curr->z );
+	            char * rz = keyToRegister( z, 0 );
+	            printf( "\tcmp %s %s\n", ry, rz );
+	            char * label = generateLabel();
+	            char * endLabel = generateLabel();	            
+	            printf( "\tjl %s\n", label );
+	            printf( "\tmovl $0 %s\n", rx );
+	            printf( "\tjmp %s\n", endLabel );
+	            printf( "%s:\n", label );
+	            printf( "\tmovl $1 %s\n", rx );	
+	            printf( "%s:\n", endLabel );
+	            free( x );
+		        free( rx );
+		        free( y );
+		        free( ry );
+		        free( z );
+		        free( rz );
+		        free( label );
+		        free( endLabel );
+		        break;            
+            }
+            
 		    case OP_GT:
+		    {
+		        char * x = ASM_FindRegisterForAddress( asm, curr->x );
+	            char * rx = keyToRegister( x, 0 );
+		        char * y = ASM_FindRegisterForAddress( asm, curr->y );
+	            char * ry = keyToRegister( y, 0 );
+	            char * z = ASM_FindRegisterForAddress( asm, curr->z );
+	            char * rz = keyToRegister( z, 0 );
+	            printf( "\tcmp %s %s\n", ry, rz );
+	            char * label = generateLabel();
+	            char * endLabel = generateLabel();	            
+	            printf( "\tjg %s\n", label );
+	            printf( "\tmovl $0 %s\n", rx );
+	            printf( "\tjmp %s\n", endLabel );
+	            printf( "%s:\n", label );
+	            printf( "\tmovl $1 %s\n", rx );	
+	            printf( "%s:\n", endLabel );
+	            free( x );
+		        free( rx );
+		        free( y );
+		        free( ry );
+		        free( z );
+		        free( rz );
+		        free( label );
+		        free( endLabel );
+		        break;            
+            }
+            
 		    case OP_LE:
+		    {
+		        char * x = ASM_FindRegisterForAddress( asm, curr->x );
+	            char * rx = keyToRegister( x, 0 );
+		        char * y = ASM_FindRegisterForAddress( asm, curr->y );
+	            char * ry = keyToRegister( y, 0 );
+	            char * z = ASM_FindRegisterForAddress( asm, curr->z );
+	            char * rz = keyToRegister( z, 0 );
+	            printf( "\tcmp %s %s\n", ry, rz );
+	            char * label = generateLabel();
+	            char * endLabel = generateLabel();	            
+	            printf( "\tjle %s\n", label );
+	            printf( "\tmovl $0 %s\n", rx );
+	            printf( "\tjmp %s\n", endLabel );
+	            printf( "%s:\n", label );
+	            printf( "\tmovl $1 %s\n", rx );	
+	            printf( "%s:\n", endLabel );
+	            free( x );
+		        free( rx );
+		        free( y );
+		        free( ry );
+		        free( z );
+		        free( rz );
+		        free( label );
+		        free( endLabel );
+		        break;            
+            }
+            
 		    case OP_GE:
+		    {
+		        char * x = ASM_FindRegisterForAddress( asm, curr->x );
+	            char * rx = keyToRegister( x, 0 );
+		        char * y = ASM_FindRegisterForAddress( asm, curr->y );
+	            char * ry = keyToRegister( y, 0 );
+	            char * z = ASM_FindRegisterForAddress( asm, curr->z );
+	            char * rz = keyToRegister( z, 0 );
+	            printf( "\tcmp %s %s\n", ry, rz );
+	            char * label = generateLabel();
+	            char * endLabel = generateLabel();	            
+	            printf( "\tjge %s\n", label );
+	            printf( "\tmovl $0 %s\n", rx );
+	            printf( "\tjmp %s\n", endLabel );
+	            printf( "%s:\n", label );
+	            printf( "\tmovl $1 %s\n", rx );	
+	            printf( "%s:\n", endLabel );
+	            free( x );
+		        free( rx );
+		        free( y );
+		        free( ry );
+		        free( z );
+		        free( rz );
+		        free( label );
+		        free( endLabel );
+		        break;            
+            }
+		    
 		    case OP_ADD:
+		    {
+		        char * y = ASM_FindRegisterForAddress( asm, curr->y );
+	            char * ry = keyToRegister( y, 0 );
+		        char * z = ASM_FindRegisterForAddress( asm, curr->z );
+	            char * rz = keyToRegister( z, 0 );
+		        printf( "\taddl %s %s\n", rz, ry );
+		        char * x = ASM_FindRegisterForAddress( asm, curr->x );
+	            char * rx = keyToRegister( x, 0 );
+	            printf( "\tmovl %s %s\n", ry, rx );
+	            ASM_UpdateOperation( asm, x, curr->x.str );	            
+	            free( x );
+		        free( rx );
+		        free( y );
+		        free( ry );
+		        free( z );
+		        free( rz );
+		        break;
+		    }
+		    
 		    case OP_SUB:
+		    {
+		        char * y = ASM_FindRegisterForAddress( asm, curr->y );
+	            char * ry = keyToRegister( y, 0 );
+		        char * z = ASM_FindRegisterForAddress( asm, curr->z );
+	            char * rz = keyToRegister( z, 0 );
+		        printf( "\tsubl %s %s\n", rz, ry );
+		        char * x = ASM_FindRegisterForAddress( asm, curr->x );
+	            char * rx = keyToRegister( x, 0 );
+	            printf( "\tmovl %s %s\n", ry, rx );
+	            ASM_UpdateOperation( asm, x, curr->x.str );	            
+	            free( x );
+		        free( rx );
+		        free( y );
+		        free( ry );
+		        free( z );
+		        free( rz );
+		        break;
+		    }
+		    
 		    case OP_DIV:
+		    {
+		        char * y = ASM_FindRegisterForAddress( asm, curr->y );
+	            char * ry = keyToRegister( y, 0 );
+		        char * z = ASM_FindRegisterForAddress( asm, curr->z );
+	            char * rz = keyToRegister( z, 0 );
+		        printf( "\tidiv %s %s\n", rz, ry );
+		        char * x = ASM_FindRegisterForAddress( asm, curr->x );
+	            char * rx = keyToRegister( x, 0 );
+	            printf( "\tmovl %s %s\n", ry, rx );
+	            ASM_UpdateOperation( asm, x, curr->x.str );
+	            free( x );
+		        free( rx );
+		        free( y );
+		        free( ry );
+		        free( z );
+		        free( rz );
+		        break;
+		    }
+		    
 		    case OP_MUL:
 		    {
-			    
-			    break;
+		        char * y = ASM_FindRegisterForAddress( asm, curr->y );
+	            char * ry = keyToRegister( y, 0 );
+		        char * z = ASM_FindRegisterForAddress( asm, curr->z );
+	            char * rz = keyToRegister( z, 0 );
+		        printf( "\timul %s %s\n", rz, ry );
+		        char * x = ASM_FindRegisterForAddress( asm, curr->x );
+	            char * rx = keyToRegister( x, 0 );
+	            printf( "\tmovl %s %s\n", ry, rx );
+	            ASM_UpdateOperation( asm, x, curr->x.str );	            
+	            free( x );
+		        free( rx );
+		        free( y );
+		        free( ry );
+		        free( z );
+		        free( rz );
+		        break;
 		    }
+		    
 		    // instruction with no args
 		    case OP_RET:
 		    {
+		        printf( "\tret\n" );
 			    break;
 		    }
         }
@@ -843,16 +1136,16 @@ void ASM_Build( Assembler * asm, IR * ir, char * filepath )
 {
     FILE * fp = freopen( filepath, "w", stdout );
     
-    printf( ".section .data\n" );
+    printf( ".data\n" );
     
     String * str = ir->strings;
     while( str )
     {
-        printf( "%s: .ascii \"%s\\0\"\n", str->name, str->value );
+        printf( "%s: .string %s\n", str->name, str->value );
         str = str->next;
     }
         
-    printf( ".section .text\n" );
+    printf( ".text\n" );
     
     Function * func = ir->functions;
     while( func )
